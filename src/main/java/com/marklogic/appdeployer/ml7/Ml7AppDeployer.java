@@ -28,6 +28,7 @@ public class Ml7AppDeployer extends LoggingObject implements AppDeployer {
 
     private ManageClient manageClient;
     private ModulesLoader modulesLoader;
+    private Authentication authentication = Authentication.DIGEST;
 
     public Ml7AppDeployer(ManageClient manageClient) {
         this.manageClient = manageClient;
@@ -195,7 +196,7 @@ public class Ml7AppDeployer extends LoggingObject implements AppDeployer {
 
     protected DatabaseClient newDatabaseClient(AppConfig config) {
         return DatabaseClientFactory.newClient(config.getHost(), config.getRestPort(), config.getUsername(),
-                config.getPassword(), Authentication.DIGEST);
+                config.getPassword(), authentication);
     }
 
     protected void installDatabases(AppConfig appConfig) {
@@ -234,7 +235,8 @@ public class Ml7AppDeployer extends LoggingObject implements AppDeployer {
     }
 
     protected void createRestApiServers(AppConfig appConfig) {
-        // Don't need to pass in a modules database names, the REST API will create it automatically with the name we
+        // Don't need to pass in a modules database names, the REST API will create it automatically
+        // with the name we
         // want
         logger.info("Creating main REST API server with name: " + appConfig.getRestServerName());
         manageClient.createRestApiServer(appConfig.getRestServerName(), appConfig.getContentDatabaseName(),
@@ -357,5 +359,13 @@ public class Ml7AppDeployer extends LoggingObject implements AppDeployer {
 
     public ModulesLoader getModulesLoader() {
         return modulesLoader;
+    }
+
+    public Authentication getAuthentication() {
+        return authentication;
+    }
+
+    public void setAuthentication(Authentication authentication) {
+        this.authentication = authentication;
     }
 }
