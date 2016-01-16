@@ -4,6 +4,7 @@ import java.io.File;
 
 import com.marklogic.appdeployer.command.AbstractResourceCommand;
 import com.marklogic.appdeployer.command.CommandContext;
+import com.marklogic.appdeployer.command.SortOrderConstants;
 import com.marklogic.mgmt.ResourceManager;
 import com.marklogic.mgmt.SaveReceipt;
 import com.marklogic.mgmt.mimetypes.MimetypeManager;
@@ -11,6 +12,8 @@ import com.marklogic.mgmt.mimetypes.MimetypeManager;
 public class DeployMimetypesCommand extends AbstractResourceCommand {
 
     public DeployMimetypesCommand() {
+        setExecuteSortOrder(SortOrderConstants.DEPLOY_MIMETYPES);
+        setUndoSortOrder(SortOrderConstants.DELETE_MIMETYPES);
         setRestartAfterDelete(true);
     }
 
