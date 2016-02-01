@@ -65,3 +65,9 @@ if (project.hasProperty("myBintrayUser")) {
     }
   }
 }
+
+
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.6'
+}
