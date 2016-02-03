@@ -19,9 +19,9 @@ Under the hood, it depends on Spring's [RestTemplate](http://docs.spring.io/spri
 
 The general pattern for using the management client library is:
 
-1. Create an instance of [ManageConfig](https://github.com/rjrudin/ml-app-deployer/blob/master/src/main/java/com/rjrudin/marklogic/mgmt/ManageConfig.java), which specifies connection information for the management REST API instance.
-2. Create an instance of [ManageClient](https://github.com/rjrudin/ml-app-deployer/blob/master/src/main/java/com/rjrudin/marklogic/mgmt/ManageClient.java) using ManageConfig. ManageClient simply wraps a RestTemplate with some convenience methods.
-3. Using ManageClient, create a Manager class based on the management resource you want to configure. For example, to create or modify or delete a database, create a [DatabaseManager](https://github.com/rjrudin/ml-app-deployer/blob/master/src/main/java/com/rjrudin/marklogic/mgmt/databases/DatabaseManager.java) to talk to the [database endpoints](http://docs.marklogic.com/REST/management/databases). 
+1. Create an instance of [ManageConfig](https://github.com/rjrudin/ml-app-deployer/blob/master/src/main/java/com/marklogic/mgmt/ManageConfig.java), which specifies connection information for the management REST API instance.
+2. Create an instance of [ManageClient](https://github.com/rjrudin/ml-app-deployer/blob/master/src/main/java/com/marklogic/mgmt/ManageClient.java) using ManageConfig. ManageClient simply wraps a RestTemplate with some convenience methods.
+3. Using ManageClient, create a Manager class based on the management resource you want to configure. For example, to create or modify or delete a database, create a [DatabaseManager](https://github.com/rjrudin/ml-app-deployer/blob/master/src/main/java/com/marklogic/mgmt/databases/DatabaseManager.java) to talk to the [database endpoints](http://docs.marklogic.com/REST/management/databases). 
 
 Here's a brief example of what that looks like:
 
@@ -49,7 +49,7 @@ files in the ml-config directory structure:
     ManageClient client = new ManageClient(); // defaults to localhost/8002/admin/admin
     AdminManager manager = new AdminManager(); // used for restarting ML; defaults to localhost/8001/admin/admin
     AppDeployer deployer = new SimpleAppDeployer(client, manager, 
-        new CreateRestApiServersCommand(), new CreateUsersCommand());
+        new DeployRestApiServersCommand(), new DeployUsersCommand());
     
     // AppConfig contains all configuration about the application being deployed
     AppConfig config = new AppConfig(); 
@@ -63,3 +63,7 @@ files in the ml-config directory structure:
     
     // Calls each command, giving each a chance to undo what it did before
     deployer.undeploy(config); 
+
+## When will there be a 2.0 final of ml-app-deployer?
+
+This will be created in conjunction with the release of MarkLogic 8.0-4, which includes support for triggers and alerts, along with a number of fixes. 
