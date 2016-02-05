@@ -15,7 +15,6 @@ import com.marklogic.client.DatabaseClientFactory.SSLHostnameVerifier;
 import com.marklogic.client.modulesloader.impl.XccAssetLoader;
 import com.marklogic.client.modulesloader.ssl.SimpleX509TrustManager;
 import com.marklogic.client.modulesloader.xcc.DefaultDocumentFormatGetter;
-import com.marklogic.mgmt.ManageClient;
 
 /**
  * Encapsulates common configuration properties for an application deployed to MarkLogic. These properties include not
@@ -51,6 +50,7 @@ public class AppConfig {
      * The default path from which modules will be loaded into a modules database.
      */
     public final static String DEFAULT_MODULES_PATH = "src/main/ml-modules";
+    public final static String DEFAULT_SCHEMAS_PATH = "src/main/ml-schemas";
 
     public final static String DEFAULT_HOST = "localhost";
     public final static String DEFAULT_GROUP = "Default";
@@ -79,6 +79,7 @@ public class AppConfig {
     private String schemasDatabaseName;
 
     private List<String> modulePaths;
+    private String schemasPath;
     private ConfigDir configDir;
 
     // Passed into the TokenReplacer that subclasses of AbstractCommand use
@@ -103,13 +104,14 @@ public class AppConfig {
 
     
 	public AppConfig() {
-        this(DEFAULT_MODULES_PATH);
+        this(DEFAULT_MODULES_PATH, DEFAULT_SCHEMAS_PATH);
     }
 
-    public AppConfig(String defaultModulePath) {
+    public AppConfig(String defaultModulePath, String defaultSchemasPath) {
         modulePaths = new ArrayList<String>();
         modulePaths.add(defaultModulePath);
         configDir = new ConfigDir();
+        schemasPath = defaultSchemasPath;
     }
 
     public void setSimpleSslConfig() {
@@ -306,6 +308,17 @@ public class AppConfig {
 
     public void setTestRestPort(Integer testRestPort) {
         this.testRestPort = testRestPort;
+    }
+
+    /**
+     * @return a list of all the paths from which modules should be loaded into a REST API server modules database
+     */
+    public String getSchemasPath() {
+        return schemasPath;
+    }
+
+    public void setSchemasPath(String schemasPath) {
+        this.schemasPath = schemasPath;
     }
 
     /**
