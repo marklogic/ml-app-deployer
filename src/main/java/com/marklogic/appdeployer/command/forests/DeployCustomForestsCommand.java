@@ -3,11 +3,15 @@ package com.marklogic.appdeployer.command.forests;
 import com.marklogic.appdeployer.command.AbstractCommand;
 import com.marklogic.appdeployer.command.CommandContext;
 import com.marklogic.appdeployer.command.SortOrderConstants;
+import com.marklogic.mgmt.forests.ForestManager;
 
 import java.io.File;
 
 /**
- * For each directory in the ml-config/forests directory, TODO.
+ * Use this command when you want precise control over the forests that are created for a database. It processes
+ * each directory under ml-config/forests (the name of the directory does not matter, but it makes sense to name
+ * it after the database that the forests belong to), and each file in a directory can have a single forest object
+ * or an array of forest objects.
  */
 public class DeployCustomForestsCommand extends AbstractCommand {
 
@@ -26,9 +30,10 @@ public class DeployCustomForestsCommand extends AbstractCommand {
 	}
 
 	protected void processDirectory(File dir, CommandContext context) {
+		ForestManager mgr = new ForestManager(context.getManageClient());
 		for (File f : listFilesInDirectory(dir)) {
-			logger.info("Processing: " + f.getAbsolutePath());
+			String payload = copyFileToString(f, context);
+			mgr.saveJsonForests(payload);
 		}
-
 	}
 }
