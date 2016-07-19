@@ -22,7 +22,6 @@ public class ForestManager extends AbstractResourceManager {
 
     public ForestManager(ManageClient client) {
         super(client);
-        setUpdateAllowed(true);
     }
 
     public void createJsonForestWithName(String name, String host) {
