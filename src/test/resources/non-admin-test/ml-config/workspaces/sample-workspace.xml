@@ -1,0 +1,3 @@
+<export><workspace name="Workspace 1"><query name="Query 1" focus="true" active="true" content-source="as:3004928512687729001:" mode="xquery">xquery version "1.0-ml";
+cts:uris((), (), cts:word-query("test"))</query><query name="Query 2" focus="false" active="true" content-source="as:3004928512687729001:" mode="xquery">xquery version "1.0-ml";
+fn:doc("/foo/doc2.xml")</query></workspace></export>
