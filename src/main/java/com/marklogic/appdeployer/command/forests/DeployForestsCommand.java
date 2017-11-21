@@ -85,7 +85,7 @@ public class DeployForestsCommand extends AbstractCommand {
 
         // Find out how many forests exist already
         int countOfExistingForests = new DatabaseManager(context.getManageClient()).getPrimaryForestIds(getForestDatabaseName(appConfig)).size();
-        int desiredNumberOfForests = hostNames.size() * forestsPerHost;
+        int desiredNumberOfForests = hostNames.size() * context.getAppConfig().getContentForestsPerHost();
 
         // Loop over the number of forests to create, starting with count + 1, and iterating over the hosts
         for (int i = countOfExistingForests + 1; i <= desiredNumberOfForests;) {
