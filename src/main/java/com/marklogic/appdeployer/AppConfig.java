@@ -144,7 +144,7 @@ public class AppConfig {
     private String[] additionalBinaryExtensions;
 
     // Will override the number of forests that DeployContentDatabasesCommand creates
-    private Integer contentForestsPerHost;
+    private Integer contentForestsPerHost = 1;
 
     // Comma-delimited string used for configuring forest replicas
     private String databaseNamesAndReplicaCounts;
