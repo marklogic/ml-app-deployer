@@ -89,7 +89,7 @@ public class ConfigureForestReplicasCommand extends AbstractUndoableCommand {
 		for (String forestName : forestNamesAndReplicaCounts.keySet()) {
 			int replicaCount = forestNamesAndReplicaCounts.get(forestName);
 			if (replicaCount > 0) {
-				configureReplicaForests(forestName, replicaCount, hostIds, context, forestMgr);
+				configureReplicaForests(null, forestName, replicaCount, hostIds, context, forestMgr);
 			}
 		}
 	}
@@ -107,11 +107,16 @@ public class ConfigureForestReplicasCommand extends AbstractUndoableCommand {
 
 			for (String databaseName : databaseNamesAndReplicaCounts.keySet()) {
 				logger.info(format("Deleting forest replicas for database %s", databaseName));
-				List<String> forestNames = dbMgr.getForestNames(databaseName);
-				for (String forestName : forestNames) {
-					deleteReplicas(forestName, forestMgr);
+				if (!dbMgr.exists(databaseName)) {
+					logger.warn(format("Database %s does not exist, so not able to delete forest replica for it; perhaps a previous command deleted the database?", databaseName));
 				}
-				logger.info(format("Finished deleting forest replicas for database %s", databaseName));
+				else {
+					List<String> forestNames = dbMgr.getForestNames(databaseName);
+					for (String forestName : forestNames) {
+						deleteReplicas(forestName, forestMgr);
+					}
+					logger.info(format("Finished deleting forest replicas for database %s", databaseName));
+				}
 			}
 
 			for (String forestName : forestNamesAndReplicaCounts.keySet()) {
@@ -148,7 +153,7 @@ public class ConfigureForestReplicasCommand extends AbstractUndoableCommand {
 		DatabaseManager dbMgr = new DatabaseManager(context.getManageClient());
 		List<String> forestNames = dbMgr.getForestNames(databaseName);
 		for (String name : forestNames) {
-			configureReplicaForests(name, replicaCount, hostIds, context, forestMgr);
+			configureReplicaForests(databaseName, name, replicaCount, hostIds, context, forestMgr);
 		}
 	}
 
@@ -156,13 +161,14 @@ public class ConfigureForestReplicasCommand extends AbstractUndoableCommand {
 	 * Creates forests as needed (they may already exists) and then sets those forests as the replicas for the given
 	 * primaryForestName.
 	 *
+	 * @param databaseName
 	 * @param forestIdOrName
 	 * @param replicaCount
 	 * @param hostIds
 	 * @param context
 	 * @param forestMgr
 	 */
-	protected void configureReplicaForests(String forestIdOrName, int replicaCount, List<String> hostIds,
+	protected void configureReplicaForests(String databaseName, String forestIdOrName, int replicaCount, List<String> hostIds,
 	                                       CommandContext context, ForestManager forestMgr) {
 		ForestStatus status = forestMgr.getForestStatus(forestIdOrName);
 		if (!status.isPrimary()) {
@@ -175,7 +181,7 @@ public class ConfigureForestReplicasCommand extends AbstractUndoableCommand {
 		}
 
 		logger.info(format("Creating forest replicas for primary forest %s", forestIdOrName));
-		createReplicaForests(forestIdOrName, replicaCount, hostIds, context, forestMgr);
+		createReplicaForests(databaseName, forestIdOrName, replicaCount, hostIds, context, forestMgr);
 		logger.info(format("Finished creating forest replicas for primary forest %s", forestIdOrName));
 	}
 
@@ -183,6 +189,7 @@ public class ConfigureForestReplicasCommand extends AbstractUndoableCommand {
 	 * Finds the host that the forest is on, and then starting with the next host in the list of host IDs,
 	 * creates N replicas.
 	 *
+	 * @param databaseName
 	 * @param forestIdOrName
 	 * @param replicaCount
 	 * @param hostIds
@@ -191,7 +198,7 @@ public class ConfigureForestReplicasCommand extends AbstractUndoableCommand {
 	 * @return a map where the keys are replica forest names, and the value of each key is the ID of the host that
 	 * the replica was created on
 	 */
-	protected Map<String, String> createReplicaForests(String forestIdOrName, int replicaCount, List<String> hostIds,
+	protected Map<String, String> createReplicaForests(String databaseName, String forestIdOrName, int replicaCount, List<String> hostIds,
 	                                                   CommandContext context, ForestManager forestMgr) {
 
 		// Using the Forest class to generate JSON
@@ -213,7 +220,7 @@ public class ConfigureForestReplicasCommand extends AbstractUndoableCommand {
 					}
 					String replicaHostId = hostIds.get(nextReplicaHostIndex);
 					String name = forestIdOrName + "-replica-" + j;
-					replicas.add(buildForestReplica(name, replicaHostId, context.getAppConfig()));
+					replicas.add(buildForestReplica(databaseName, name, replicaHostId, context.getAppConfig()));
 					replicaNamesAndHostIds.put(name, replicaHostId);
 					nextReplicaHostIndex++;
 				}
@@ -225,13 +232,72 @@ public class ConfigureForestReplicasCommand extends AbstractUndoableCommand {
 		return replicaNamesAndHostIds;
 	}
 
-	protected ForestReplica buildForestReplica(String name, String replicaHostId, AppConfig appConfig) {
+	/**
+	 * Return a ForestReplica instance with its properties configured based on what's in AppConfig.
+	 *
+	 * @param databaseName
+	 * @param name
+	 * @param replicaHostId
+	 * @param appConfig
+	 * @return
+	 */
+	protected ForestReplica buildForestReplica(String databaseName, String name, String replicaHostId, AppConfig appConfig) {
 		ForestReplica replica = new ForestReplica();
 		replica.setHost(replicaHostId);
 		replica.setReplicaName(name);
-		replica.setDataDirectory(appConfig.getReplicaForestDataDirectory());
-		replica.setLargeDataDirectory(appConfig.getReplicaForestLargeDataDirectory());
-		replica.setFastDataDirectory(appConfig.getReplicaForestFastDataDirectory());
+
+		// First set to the database-agnostic forest directories
+		replica.setDataDirectory(appConfig.getForestDataDirectory());
+		replica.setFastDataDirectory(appConfig.getForestFastDataDirectory());
+		replica.setLargeDataDirectory(appConfig.getForestLargeDataDirectory());
+
+		// Now set to the database-specific forest directories if set
+		if (databaseName != null) {
+			Map<String, String> map = appConfig.getDatabaseDataDirectories();
+			if (map != null && map.containsKey(databaseName)) {
+				replica.setDataDirectory(map.get(databaseName));
+			}
+
+			map = appConfig.getDatabaseFastDataDirectories();
+			if (map != null && map.containsKey(databaseName)) {
+				replica.setFastDataDirectory(map.get(databaseName));
+			}
+
+			map = appConfig.getDatabaseLargeDataDirectories();
+			if (map != null && map.containsKey(databaseName)) {
+				replica.setLargeDataDirectory(map.get(databaseName));
+			}
+		}
+
+		// Now set to the replica forest directories if set
+		if (appConfig.getReplicaForestDataDirectory() != null) {
+			replica.setDataDirectory(appConfig.getReplicaForestDataDirectory());
+		}
+		if (appConfig.getReplicaForestFastDataDirectory() != null) {
+			replica.setFastDataDirectory(appConfig.getReplicaForestFastDataDirectory());
+		}
+		if (appConfig.getReplicaForestLargeDataDirectory() != null) {
+			replica.setLargeDataDirectory(appConfig.getReplicaForestLargeDataDirectory());
+		}
+
+		// And now set to the database-specific replica forest directories if set
+		if (databaseName != null) {
+			Map<String, String> map = appConfig.getDatabaseReplicaDataDirectories();
+			if (map != null && map.containsKey(databaseName)) {
+				replica.setDataDirectory(map.get(databaseName));
+			}
+
+			map = appConfig.getDatabaseReplicaFastDataDirectories();
+			if (map != null && map.containsKey(databaseName)) {
+				replica.setFastDataDirectory(map.get(databaseName));
+			}
+
+			map = appConfig.getDatabaseReplicaLargeDataDirectories();
+			if (map != null && map.containsKey(databaseName)) {
+				replica.setLargeDataDirectory(map.get(databaseName));
+			}
+		}
+
 		return replica;
 	}
 

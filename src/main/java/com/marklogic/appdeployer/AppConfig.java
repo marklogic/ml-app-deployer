@@ -14,10 +14,7 @@ import com.marklogic.client.ext.tokenreplacer.PropertiesSource;
 
 import javax.net.ssl.SSLContext;
 import java.io.FileFilter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 
 /**
@@ -64,6 +61,9 @@ public class AppConfig {
 
     private String name = DEFAULT_APP_NAME;
     private String host = DEFAULT_HOST;
+
+    private boolean catchDeployExceptions = false;
+    private boolean catchUndeployExceptions = false;
 
     // Used to construct DatabaseClient instances based on inputs defined in this class
     private ConfiguredDatabaseClientFactory configuredDatabaseClientFactory = new DefaultConfiguredDatabaseClientFactory();
@@ -113,6 +113,7 @@ public class AppConfig {
 	private String moduleTimestampsPath = PropertiesModuleManager.DEFAULT_FILE_PATH;
 	private boolean deleteTestModules = false;
 	private String deleteTestModulesPattern = "/test/**";
+	private int modulesLoaderThreadCount = 8;
 
     private String schemasPath;
     private ConfigDir configDir;
@@ -122,6 +123,9 @@ public class AppConfig {
 
     // Allows for creating a triggers database without a config file for one
     private boolean createTriggersDatabase = false;
+
+    // Controls whether forests are created when a database is created
+    private boolean createForests = true;
 
     // Controls whether forests are deleted when a database is deleted
     private boolean deleteForests = true;
@@ -135,6 +139,7 @@ public class AppConfig {
     private String modulePermissions = "rest-admin,read,rest-admin,update,rest-extension-user,execute";
 
     private FileFilter assetFileFilter;
+    private FileFilter schemasFileFilter;
 
     // Additional module extensions that should be loaded as binaries into the modules database
     private String[] additionalBinaryExtensions;
@@ -145,6 +150,24 @@ public class AppConfig {
     // Comma-delimited string used for configuring forest replicas
     private String databaseNamesAndReplicaCounts;
 
+    // Comma-delimited string of database names that should only have forests (most likely just one) created on one host
+    private Set<String> databasesWithForestsOnOneHost;
+
+    private Map<String, Set<String>> databaseHosts;
+
+    // Data/fast/large directories for default forests
+    private String forestDataDirectory;
+    private String forestFastDataDirectory;
+    private String forestLargeDataDirectory;
+
+    // Comma-delimited string of database names and data directories
+    private Map<String, String> databaseDataDirectories;
+    private Map<String, String> databaseFastDataDirectories;
+    private Map<String, String> databaseLargeDataDirectories;
+    private Map<String, String> databaseReplicaDataDirectories;
+    private Map<String, String> databaseReplicaFastDataDirectories;
+    private Map<String, String> databaseReplicaLargeDataDirectories;
+
     // Configures the data-directory for replica forests built dynamically
     private String replicaForestDataDirectory;
     private String replicaForestLargeDataDirectory;
@@ -153,10 +176,10 @@ public class AppConfig {
     // Path to use for DeployFlexrepCommand
     private String flexrepPath;
 
-    // Whether or not to replace tokens in modules
+	// Whether or not to replace tokens in modules
     private boolean replaceTokensInModules = true;
     // Whether or not to prefix each module token with "@ml."
-    private boolean useRoxyTokenPrefix = true;
+    private boolean useRoxyTokenPrefix = false;
     // Additional PropertiesSources instance to use for replacing module tokens
     private List<PropertiesSource> moduleTokensPropertiesSources = new ArrayList<>();
 
@@ -192,6 +215,39 @@ public class AppConfig {
         configDir = new ConfigDir();
         schemasPath = defaultSchemasPath;
     }
+
+	public void populateCustomTokens(PropertiesSource propertiesSource) {
+		populateCustomTokens(propertiesSource, "%%", "%%");
+	}
+
+	/**
+	 * Populate the customTokens map in this class with the properties from the given properties source.
+	 * @param propertiesSource
+	 * @param prefix optional; if set, then each token key that is added has the prefix prepended to it
+	 * @param suffix optional; if set, then each token key that is added has the suffix appended to it
+	 */
+	public void populateCustomTokens(PropertiesSource propertiesSource, String prefix, String suffix) {
+		Properties props = propertiesSource.getProperties();
+		if (props != null) {
+			if (customTokens == null) {
+				customTokens = new HashMap<>();
+			}
+			for (Object key : props.keySet()) {
+				String skey = (String)key;
+				String value = props.getProperty(skey);
+				if (value != null) {
+					String token = skey;
+					if (prefix != null) {
+						token = prefix + token;
+					}
+					if (suffix != null) {
+						token = token + suffix;
+					}
+					customTokens.put(token, value);
+				}
+			}
+		}
+	}
 
     public void setSimpleSslConfig() {
 		setRestSslContext(SimpleX509TrustManager.newSSLContext());
@@ -568,7 +624,15 @@ public class AppConfig {
         this.assetFileFilter = assetFileFilter;
     }
 
-    public String getFlexrepPath() {
+	public FileFilter getSchemasFileFilter() {
+		return schemasFileFilter;
+	}
+
+	public void setSchemasFileFilter(FileFilter schemasFileFilter) {
+		this.schemasFileFilter = schemasFileFilter;
+	}
+
+	public String getFlexrepPath() {
         return flexrepPath;
     }
 
@@ -729,7 +793,15 @@ public class AppConfig {
         this.deleteForests = deleteForests;
     }
 
-    public boolean isNoRestServer() {
+	public boolean isCreateForests() {
+		return createForests;
+	}
+
+	public void setCreateForests(boolean createForests) {
+		this.createForests = createForests;
+	}
+
+	public boolean isNoRestServer() {
         return noRestServer;
     }
 
@@ -921,5 +993,117 @@ public class AppConfig {
 
 	public void setResourceFilenamesIncludePattern(Pattern resourceFilenamesIncludePattern) {
 		this.resourceFilenamesIncludePattern = resourceFilenamesIncludePattern;
+	}
+
+	public int getModulesLoaderThreadCount() {
+		return modulesLoaderThreadCount;
+	}
+
+	public void setModulesLoaderThreadCount(int modulesLoaderThreadCount) {
+		this.modulesLoaderThreadCount = modulesLoaderThreadCount;
+	}
+
+	public Map<String, String> getDatabaseDataDirectories() {
+		return databaseDataDirectories;
+	}
+
+	public void setDatabaseDataDirectories(Map<String, String> databaseDataDirectories) {
+		this.databaseDataDirectories = databaseDataDirectories;
+	}
+
+	public Map<String, String> getDatabaseFastDataDirectories() {
+		return databaseFastDataDirectories;
+	}
+
+	public void setDatabaseFastDataDirectories(Map<String, String> databaseFastDataDirectories) {
+		this.databaseFastDataDirectories = databaseFastDataDirectories;
+	}
+
+	public Map<String, String> getDatabaseLargeDataDirectories() {
+		return databaseLargeDataDirectories;
+	}
+
+	public void setDatabaseLargeDataDirectories(Map<String, String> databaseLargeDataDirectories) {
+		this.databaseLargeDataDirectories = databaseLargeDataDirectories;
+	}
+
+	public String getForestDataDirectory() {
+		return forestDataDirectory;
+	}
+
+	public void setForestDataDirectory(String forestDataDirectory) {
+		this.forestDataDirectory = forestDataDirectory;
+	}
+
+	public String getForestFastDataDirectory() {
+		return forestFastDataDirectory;
+	}
+
+	public void setForestFastDataDirectory(String forestFastDataDirectory) {
+		this.forestFastDataDirectory = forestFastDataDirectory;
+	}
+
+	public String getForestLargeDataDirectory() {
+		return forestLargeDataDirectory;
+	}
+
+	public void setForestLargeDataDirectory(String forestLargeDataDirectory) {
+		this.forestLargeDataDirectory = forestLargeDataDirectory;
+	}
+
+	public Map<String, String> getDatabaseReplicaDataDirectories() {
+		return databaseReplicaDataDirectories;
+	}
+
+	public void setDatabaseReplicaDataDirectories(Map<String, String> databaseReplicaDataDirectories) {
+		this.databaseReplicaDataDirectories = databaseReplicaDataDirectories;
+	}
+
+	public Map<String, String> getDatabaseReplicaFastDataDirectories() {
+		return databaseReplicaFastDataDirectories;
+	}
+
+	public void setDatabaseReplicaFastDataDirectories(Map<String, String> databaseReplicaFastDataDirectories) {
+		this.databaseReplicaFastDataDirectories = databaseReplicaFastDataDirectories;
+	}
+
+	public Map<String, String> getDatabaseReplicaLargeDataDirectories() {
+		return databaseReplicaLargeDataDirectories;
+	}
+
+	public void setDatabaseReplicaLargeDataDirectories(Map<String, String> databaseReplicaLargeDataDirectories) {
+		this.databaseReplicaLargeDataDirectories = databaseReplicaLargeDataDirectories;
+	}
+
+	public boolean isCatchDeployExceptions() {
+		return catchDeployExceptions;
+	}
+
+	public void setCatchDeployExceptions(boolean catchDeployExceptions) {
+		this.catchDeployExceptions = catchDeployExceptions;
+	}
+
+	public boolean isCatchUndeployExceptions() {
+		return catchUndeployExceptions;
+	}
+
+	public void setCatchUndeployExceptions(boolean catchUndeployExceptions) {
+		this.catchUndeployExceptions = catchUndeployExceptions;
+	}
+
+	public Set<String> getDatabasesWithForestsOnOneHost() {
+		return databasesWithForestsOnOneHost;
+	}
+
+	public void setDatabasesWithForestsOnOneHost(Set<String> databasesWithForestsOnOneHost) {
+		this.databasesWithForestsOnOneHost = databasesWithForestsOnOneHost;
+	}
+
+	public Map<String, Set<String>> getDatabaseHosts() {
+		return databaseHosts;
+	}
+
+	public void setDatabaseHosts(Map<String, Set<String>> databaseHosts) {
+		this.databaseHosts = databaseHosts;
 	}
 }

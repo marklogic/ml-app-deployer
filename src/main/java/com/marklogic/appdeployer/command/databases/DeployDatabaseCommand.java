@@ -8,9 +8,13 @@ import com.marklogic.appdeployer.command.UndoableCommand;
 import com.marklogic.appdeployer.command.forests.DeployForestsCommand;
 import com.marklogic.mgmt.PayloadParser;
 import com.marklogic.mgmt.SaveReceipt;
+import com.marklogic.mgmt.api.forest.Forest;
 import com.marklogic.mgmt.resource.databases.DatabaseManager;
+import com.marklogic.mgmt.util.ObjectMapperFactory;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -57,11 +61,16 @@ public class DeployDatabaseCommand extends AbstractCommand implements UndoableCo
     private int forestsPerHost = 1;
 
     /**
-     * Passed on to DeployForestsCommand.
+     * Passed on to DeployForestsCommand. If forests are to be created, controls whether forests on created on every
+     * host or only one one host.
      */
     private boolean createForestsOnEachHost = true;
 
     private int undoSortOrder;
+
+    private boolean subDatabase = false;
+    private String superDatabaseName;
+
 
     public DeployDatabaseCommand() {
         setExecuteSortOrder(SortOrderConstants.DEPLOY_OTHER_DATABASES);
@@ -89,12 +98,14 @@ public class DeployDatabaseCommand extends AbstractCommand implements UndoableCo
         if (payload != null) {
             DatabaseManager dbMgr = new DatabaseManager(context.getManageClient());
             SaveReceipt receipt = dbMgr.save(payload);
+
+            databaseName = receipt.getResourceId();
             if (shouldCreateForests(context, payload)) {
 	            buildDeployForestsCommand(payload, receipt, context).execute(context);
-            } else {
-            	if (logger.isInfoEnabled()) {
-            		logger.info("Found custom forests for database, so not creating default forests");
-	            }
+            }
+
+            if(!isSubDatabase()){
+            	this.addSubDatabases(dbMgr, context, databaseName);
             }
         }
     }
@@ -103,9 +114,66 @@ public class DeployDatabaseCommand extends AbstractCommand implements UndoableCo
     public void undo(CommandContext context) {
         String payload = buildPayload(context);
         if (payload != null) {
-            newDatabaseManageForDeleting(context).delete(payload);
+        	DatabaseManager dbMgr = newDatabaseManageForDeleting(context);
+        	// if this has subdatabases, detach/delete them first
+        	if(!isSubDatabase()){
+        		removeSubDatabases(dbMgr, context, dbMgr.getResourceId(payload));
+        	}
+            dbMgr.delete(payload);
         }
     }
+
+    /**
+     * Creates and attaches sub-databases to a the specified database, making it a super-database.
+     * Note: Sub-databases are expected to have a configuration files in databases/subdatabases/<super-database-name>
+     * @param dbMgr
+     * @param context
+     * @param superDatabaseName Name of the database the sub-databases are to be associated with
+     */
+    protected void addSubDatabases(DatabaseManager dbMgr, CommandContext context, String superDatabaseName) {
+        File subdbDir = new File(context.getAppConfig().getConfigDir().getDatabasesDir() + File.separator + "subdatabases" + File.separator + superDatabaseName);
+        logger.info(format("Checking for sub-databases in: %s for database: %s", subdbDir.getAbsolutePath(), superDatabaseName));
+        if(subdbDir.exists()){
+        	List<String> subDbNames = new ArrayList<String>();
+            for (File f : listFilesInDirectory(subdbDir)) {
+                logger.info(format("Will process sub database for %s found in file: %s", superDatabaseName, f.getAbsolutePath()));
+                DeployDatabaseCommand subDbCommand = new DeployDatabaseCommand();
+                subDbCommand.setDatabaseFilename(f.getName());
+                subDbCommand.setSuperDatabaseName(superDatabaseName);
+                subDbCommand.setSubDatabase(true);
+                subDbCommand.execute(context);
+                subDbNames.add(subDbCommand.getDatabaseName());
+                logger.info(format("Created subdatabase %s for database %s", subDbCommand.getDatabaseName(), superDatabaseName));
+            }
+            if(subDbNames.size() > 0){
+            	dbMgr.attachSubDatabases(superDatabaseName, subDbNames);
+            }
+        }
+    }
+
+    /**
+     * Detaches and deletes all sub-databases for the specified super-database
+     * @param dbMgr
+     * @param context
+     * @param superDatabaseName
+     */
+    protected void removeSubDatabases(DatabaseManager dbMgr, CommandContext context, String superDatabaseName){
+		File subdbDir = new File(context.getAppConfig().getConfigDir().getDatabasesDir() + File.separator + "subdatabases" + File.separator + superDatabaseName);
+        logger.info(format("Checking to see if %s has subdatabases that need to be removed. Looking in folder: %s", superDatabaseName, subdbDir.getAbsolutePath()));
+        if(subdbDir.exists()){
+        	logger.info("Removing all subdatabases from database: " + superDatabaseName);
+        	dbMgr.detachSubDatabases(superDatabaseName);
+            for (File f : listFilesInDirectory(subdbDir)) {
+                DeployDatabaseCommand subDbCommand = new DeployDatabaseCommand();
+                subDbCommand.setDatabaseFilename(f.getName());
+                subDbCommand.setSuperDatabaseName(superDatabaseName);
+                subDbCommand.setSubDatabase(true);
+                subDbCommand.undo(context);
+
+            }
+        }
+    }
+
 
     /**
      * Configures the DatabaseManager in terms of how it deletes forests based on properties in the AppConfig instance
@@ -146,7 +214,12 @@ public class DeployDatabaseCommand extends AbstractCommand implements UndoableCo
     protected String getPayload(CommandContext context) {
         File f = null;
         if (databaseFilename != null) {
-            f = new File(context.getAppConfig().getConfigDir().getDatabasesDir(), databaseFilename);
+        	if(isSubDatabase()){
+        		String subDbFileName =context.getAppConfig().getConfigDir().getDatabasesDir() + File.separator + "subdatabases" + File.separator + this.getSuperDatabaseName() + File.separator + databaseFilename;
+                f = new File(subDbFileName);
+        	}else {
+        		f = new File(context.getAppConfig().getConfigDir().getDatabasesDir(), databaseFilename);
+        	}
         }
         if (f != null && f.exists()) {
             return copyFileToString(f);
@@ -161,7 +234,9 @@ public class DeployDatabaseCommand extends AbstractCommand implements UndoableCo
     }
 
 	/**
-	 * This is where we check to see if a custom forests directory exists at ./forests/(database name). The database
+	 * Determines if forests should be created after a database is deployed.
+	 *
+	 * This includes checking to see if a custom forests directory exists at ./forests/(database name). The database
 	 * name is extracted from the payload via a PayloadParser. This check can be disabled by setting
 	 * checkForCustomForests to false.
 	 *
@@ -170,10 +245,21 @@ public class DeployDatabaseCommand extends AbstractCommand implements UndoableCo
 	 * @return
 	 */
 	protected boolean shouldCreateForests(CommandContext context, String payload) {
+		if (!context.getAppConfig().isCreateForests()) {
+			if (logger.isInfoEnabled()) {
+				logger.info("Forest creation is disabled, so not creating any forests");
+			}
+			return false;
+		}
+
 		if (isCheckForCustomForests()) {
 			PayloadParser parser = new PayloadParser();
 			String dbName = parser.getPayloadFieldValue(payload, "database-name");
-			return !customForestsExist(context, dbName);
+			boolean customForestsDontExist = !customForestsExist(context, dbName);
+			if (!customForestsDontExist && logger.isInfoEnabled()) {
+				logger.info("Found custom forests for database " + dbName + ", so not creating default forests");
+			}
+			return customForestsDontExist;
 		}
 		return true;
 	}
@@ -205,13 +291,52 @@ public class DeployDatabaseCommand extends AbstractCommand implements UndoableCo
      */
     protected DeployForestsCommand buildDeployForestsCommand(String dbPayload, SaveReceipt receipt,
             CommandContext context) {
+    	final String databaseName = receipt.getResourceId();
+
         DeployForestsCommand c = new DeployForestsCommand();
         c.setCreateForestsOnEachHost(createForestsOnEachHost);
         c.setForestsPerHost(determineForestCountPerHost(dbPayload, context));
         c.setForestFilename(forestFilename);
-        c.setDatabaseName(receipt.getResourceId());
-        c.setForestPayload(DeployForestsCommand.DEFAULT_FOREST_PAYLOAD);
+        c.setDatabaseName(databaseName);
+
+        Forest forest = buildForest(context.getAppConfig());
+        forest.setObjectMapper(ObjectMapperFactory.getObjectMapper());
+	    c.setForestPayload(forest.getJson());
         return c;
+    }
+
+    protected Forest buildForest(AppConfig config) {
+	    Forest forest = new Forest();
+	    forest.setForestName("%%FOREST_NAME%%");
+	    forest.setHost("%%FOREST_HOST%%");
+	    forest.setDatabase("%%FOREST_DATABASE%%");
+
+	    // First see if we have any database-agnostic forest directories
+	    if (config.getForestDataDirectory() != null) {
+	    	forest.setDataDirectory(config.getForestDataDirectory());
+	    }
+	    if (config.getForestFastDataDirectory() != null) {
+	    	forest.setFastDataDirectory(config.getForestFastDataDirectory());
+	    }
+	    if (config.getForestLargeDataDirectory() != null) {
+	    	forest.setLargeDataDirectory(config.getForestLargeDataDirectory());
+	    }
+
+	    // Now check for database-specific forest directories
+	    Map<String, String> map = config.getDatabaseDataDirectories();
+	    if (map != null && map.containsKey(databaseName)) {
+		    forest.setDataDirectory(map.get(databaseName));
+	    }
+	    map = config.getDatabaseFastDataDirectories();
+	    if (map != null && map.containsKey(databaseName)) {
+		    forest.setFastDataDirectory(map.get(databaseName));
+	    }
+	    map = config.getDatabaseLargeDataDirectories();
+	    if (map != null && map.containsKey(databaseName)) {
+		    forest.setLargeDataDirectory(map.get(databaseName));
+	    }
+
+	    return forest;
     }
 
     /**
@@ -304,4 +429,20 @@ public class DeployDatabaseCommand extends AbstractCommand implements UndoableCo
     public void setCheckForCustomForests(boolean checkForCustomForests) {
         this.checkForCustomForests = checkForCustomForests;
     }
+
+	public void setSubDatabase(boolean isSubDatabase){
+		this.subDatabase = isSubDatabase;
+	}
+
+	public boolean isSubDatabase() {
+		return this.subDatabase;
+	}
+
+	public void setSuperDatabaseName(String name){
+		this.superDatabaseName = name;
+	}
+
+	public String getSuperDatabaseName() {
+		return this.superDatabaseName;
+	}
 }

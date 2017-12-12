@@ -66,7 +66,7 @@ public abstract class AbstractAppDeployerTest extends AbstractMgmtTest {
         try {
             appDeployer.undeploy(appConfig);
         } catch (Exception e) {
-            logger.warn("Error while waiting for MarkLogic to restart: " + e.getMessage());
+            logger.warn("Unexpected error while undeploying sample app: " + e.getMessage());
         }
     }
 

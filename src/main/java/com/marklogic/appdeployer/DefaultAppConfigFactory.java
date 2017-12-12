@@ -6,9 +6,7 @@ import com.marklogic.mgmt.util.PropertySource;
 import com.marklogic.mgmt.util.PropertySourceFactory;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Pattern;
 
 public class DefaultAppConfigFactory extends PropertySourceFactory implements AppConfigFactory {
@@ -26,6 +24,18 @@ public class DefaultAppConfigFactory extends PropertySourceFactory implements Ap
 		AppConfig c = new AppConfig();
 
 		String prop = null;
+
+		prop = getProperty("mlCatchDeployExceptions");
+		if (prop != null) {
+			logger.info("Catch deploy exceptions: " + prop);
+			c.setCatchDeployExceptions(Boolean.parseBoolean(prop));
+		}
+
+		prop = getProperty("mlCatchUndeployExceptions");
+		if (prop != null) {
+			logger.info("Catch undeploy exceptions: " + prop);
+			c.setCatchUndeployExceptions(Boolean.parseBoolean(prop));
+		}
 
 		/**
 		 * mlUsername and mlPassword are used as the default username/password for the admin, rest-admin, and manage-admin
@@ -73,6 +83,12 @@ public class DefaultAppConfigFactory extends PropertySourceFactory implements Ap
 		if (prop != null) {
 			logger.info("Schemas database name: " + prop);
 			c.setSchemasDatabaseName(prop);
+		}
+
+		prop = getProperty("mlTriggersDatabaseName");
+		if (prop != null) {
+			logger.info("Triggers database name: " + prop);
+			c.setTriggersDatabaseName(prop);
 		}
 
 		/**
@@ -217,7 +233,7 @@ public class DefaultAppConfigFactory extends PropertySourceFactory implements Ap
 			c.setAppServicesExternalName(prop);
 		}
 
-		if (getProperty("mlAppServicesSimpleSsl") != null) {
+		if ("true".equals(getProperty("mlAppServicesSimpleSsl"))) {
 			logger.info("Using simple SSL context and 'ANY' hostname verifier for authenticating against the App-Services server");
 			c.setAppServicesSimpleSslConfig();
 		}
@@ -230,6 +246,12 @@ public class DefaultAppConfigFactory extends PropertySourceFactory implements Ap
 		if (prop != null) {
 			logger.info("Content forests per host: " + prop);
 			c.setContentForestsPerHost(Integer.parseInt(prop));
+		}
+
+		prop = getProperty("mlCreateForests");
+		if (prop != null) {
+			logger.info("Create forests for each deployed database: " + prop);
+			c.setCreateForests(Boolean.parseBoolean(prop));
 		}
 
 		/**
@@ -254,22 +276,104 @@ public class DefaultAppConfigFactory extends PropertySourceFactory implements Ap
 			c.setDatabaseNamesAndReplicaCounts(prop);
 		}
 
+		prop = getProperty("mlDatabasesWithForestsOnOneHost");
+		if (prop != null) {
+			logger.info("Databases that will have their forest(s) created on a single host: " + prop);
+			String[] names = prop.split(",");
+			Set<String> set = new HashSet<>();
+			for (String name : names) {
+				set.add(name);
+			}
+			c.setDatabasesWithForestsOnOneHost(set);
+		}
+
+		prop = getProperty("mlDatabaseHosts");
+		if (prop != null) {
+			logger.info("Databases and the hosts that their forests will be created on: " + prop);
+			String[] tokens = prop.split(",");
+			Map<String, Set<String>> map = new HashMap<>();
+			for (int i = 0; i < tokens.length; i += 2) {
+				String dbName = tokens[i];
+				String[] hostNames = tokens[i + 1].split("\\|");
+				Set<String> names = new HashSet<>();
+				for (String name : hostNames) {
+					names.add(name);
+				}
+				map.put(dbName, names);
+			}
+			c.setDatabaseHosts(map);
+		}
+
+		prop = getProperty("mlForestDataDirectory");
+		if (prop != null) {
+			logger.info("Default forest data directory for all databases: " + prop);
+			c.setForestDataDirectory(prop);
+		}
+
+		prop = getProperty("mlForestFastDataDirectory");
+		if (prop != null) {
+			logger.info("Default forest fast data directory for all databases: " + prop);
+			c.setForestFastDataDirectory(prop);
+		}
+
+		prop = getProperty("mlForestLargeDataDirectory");
+		if (prop != null) {
+			logger.info("Default forest large data directory for all databases: " + prop);
+			c.setForestLargeDataDirectory(prop);
+		}
+
 		prop = getProperty("mlReplicaForestDataDirectory");
 		if (prop != null) {
-			logger.info("Replica forest data directory " + prop);
+			logger.info("Default replica forest data directory for all databases: " + prop);
 			c.setReplicaForestDataDirectory(prop);
 		}
 
 		prop = getProperty("mlReplicaForestLargeDataDirectory");
 		if (prop != null) {
-			logger.info("Replica forest large data directory " + prop);
+			logger.info("Default replica forest large data directory for all databases: " + prop);
 			c.setReplicaForestLargeDataDirectory(prop);
 		}
 
 		prop = getProperty("mlReplicaForestFastDataDirectory");
 		if (prop != null) {
-			logger.info("Replica forest fast data directory " + prop);
+			logger.info("Default replica forest fast data directory for all databases: " + prop);
 			c.setReplicaForestFastDataDirectory(prop);
+		}
+
+		prop = getProperty("mlDatabaseDataDirectories");
+		if (prop != null) {
+			logger.info("Databases and forest data directories: " + prop);
+			c.setDatabaseDataDirectories(buildMapFromCommaDelimitedString(prop));
+		}
+
+		prop = getProperty("mlDatabaseFastDataDirectories");
+		if (prop != null) {
+			logger.info("Databases and forest fast data directories: " + prop);
+			c.setDatabaseFastDataDirectories(buildMapFromCommaDelimitedString(prop));
+		}
+
+		prop = getProperty("mlDatabaseLargeDataDirectories");
+		if (prop != null) {
+			logger.info("Databases and forest large data directories: " + prop);
+			c.setDatabaseLargeDataDirectories(buildMapFromCommaDelimitedString(prop));
+		}
+
+		prop = getProperty("mlDatabaseReplicaDataDirectories");
+		if (prop != null) {
+			logger.info("Databases and replica forest data directories: " + prop);
+			c.setDatabaseReplicaDataDirectories(buildMapFromCommaDelimitedString(prop));
+		}
+
+		prop = getProperty("mlDatabaseReplicaFastDataDirectories");
+		if (prop != null) {
+			logger.info("Databases and replica forest fast data directories: " + prop);
+			c.setDatabaseReplicaFastDataDirectories(buildMapFromCommaDelimitedString(prop));
+		}
+
+		prop = getProperty("mlDatabaseReplicaLargeDataDirectories");
+		if (prop != null) {
+			logger.info("Databases and replica forest large data directories: " + prop);
+			c.setDatabaseReplicaLargeDataDirectories(buildMapFromCommaDelimitedString(prop));
 		}
 
 		/**
@@ -319,7 +423,7 @@ public class DefaultAppConfigFactory extends PropertySourceFactory implements Ap
 		 * When modules are loaded via the Client REST API, if the app server requires an SSL connection, then
 		 * setting this property will force the simplest SSL connection to be created.
 		 */
-		if (getProperty("mlSimpleSsl") != null) {
+		if ("true".equals(getProperty("mlSimpleSsl"))) {
 			logger.info(
 				"Using simple SSL context and 'ANY' hostname verifier for authenticating against client REST API server");
 			c.setSimpleSslConfig();
@@ -446,6 +550,12 @@ public class DefaultAppConfigFactory extends PropertySourceFactory implements Ap
 			c.setDeleteTestModulesPattern(prop);
 		}
 
+		prop = getProperty("mlModulesLoaderThreadCount");
+		if (prop != null) {
+			logger.info("Modules loader thread count: " + prop);
+			c.setModulesLoaderThreadCount(Integer.parseInt(prop));
+		}
+
 		/**
 		 * The following properties are all for generating Entity Services artifacts.
 		 */
@@ -526,4 +636,12 @@ public class DefaultAppConfigFactory extends PropertySourceFactory implements Ap
 		return c;
 	}
 
+	protected Map<String, String> buildMapFromCommaDelimitedString(String str) {
+		Map<String, String> map = new HashMap<>();
+		String[] tokens = str.split(",");
+		for (int i = 0; i < tokens.length; i += 2) {
+			map.put(tokens[i], tokens[i + 1]);
+		}
+		return map;
+	}
 }

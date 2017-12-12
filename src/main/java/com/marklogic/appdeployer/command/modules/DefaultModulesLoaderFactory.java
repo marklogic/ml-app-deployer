@@ -1,18 +1,18 @@
 package com.marklogic.appdeployer.command.modules;
 
 import com.marklogic.appdeployer.AppConfig;
-import com.marklogic.client.DatabaseClient;
-import com.marklogic.client.ext.tokenreplacer.DefaultTokenReplacer;
-import com.marklogic.client.ext.tokenreplacer.PropertiesSource;
-import com.marklogic.client.ext.tokenreplacer.RoxyTokenReplacer;
-import com.marklogic.client.ext.tokenreplacer.TokenReplacer;
+import com.marklogic.appdeployer.util.MapPropertiesSource;
+import com.marklogic.client.ext.batch.RestBatchWriter;
 import com.marklogic.client.ext.helper.LoggingObject;
 import com.marklogic.client.ext.modulesloader.ModulesLoader;
 import com.marklogic.client.ext.modulesloader.ModulesManager;
 import com.marklogic.client.ext.modulesloader.impl.*;
+import com.marklogic.client.ext.tokenreplacer.DefaultTokenReplacer;
+import com.marklogic.client.ext.tokenreplacer.PropertiesSource;
+import com.marklogic.client.ext.tokenreplacer.RoxyTokenReplacer;
+import com.marklogic.client.ext.tokenreplacer.TokenReplacer;
 import com.marklogic.xcc.template.XccTemplate;
 
-import java.io.File;
 import java.util.Map;
 import java.util.Properties;
 
@@ -23,11 +23,14 @@ public class DefaultModulesLoaderFactory extends LoggingObject implements Module
 		ModulesManager modulesManager = null;
 		String path = appConfig.getModuleTimestampsPath();
 		if (path != null) {
-			modulesManager = new PropertiesModuleManager(new File(path));
+			modulesManager = new PropertiesModuleManager(path);
 		}
 
-		DatabaseClient modulesDatabaseClient = appConfig.newModulesDatabaseClient();
-		AssetFileLoader assetFileLoader = new AssetFileLoader(modulesDatabaseClient, modulesManager);
+		int threadCount = appConfig.getModulesLoaderThreadCount();
+
+		RestBatchWriter assetBatchWriter = new RestBatchWriter(appConfig.newModulesDatabaseClient(), false);
+		assetBatchWriter.setThreadCount(threadCount);
+		AssetFileLoader assetFileLoader = new AssetFileLoader(assetBatchWriter, modulesManager);
 
 		String permissions = appConfig.getModulePermissions();
 		if (permissions != null) {
@@ -49,6 +52,7 @@ public class DefaultModulesLoaderFactory extends LoggingObject implements Module
 
 		DefaultModulesLoader modulesLoader = new DefaultModulesLoader(assetFileLoader);
 		modulesLoader.setModulesManager(modulesManager);
+		modulesLoader.setTaskThreadCount(threadCount);
 
 		if (appConfig.isStaticCheckAssets()) {
 			modulesLoader.setStaticChecker(newStaticChecker(appConfig));
@@ -76,15 +80,8 @@ public class DefaultModulesLoaderFactory extends LoggingObject implements Module
 	protected TokenReplacer buildModuleTokenReplacer(AppConfig appConfig) {
 		DefaultTokenReplacer r = appConfig.isUseRoxyTokenPrefix() ? new RoxyTokenReplacer() : new DefaultTokenReplacer();
 		final Map<String, String> customTokens = appConfig.getCustomTokens();
-		if (customTokens != null && !customTokens.isEmpty()) {
-			r.addPropertiesSource(new PropertiesSource() {
-				@Override
-				public Properties getProperties() {
-					Properties p = new Properties();
-					p.putAll(customTokens);
-					return p;
-				}
-			});
+		if (customTokens != null) {
+			r.addPropertiesSource(new MapPropertiesSource(customTokens));
 		}
 
 		if (appConfig.getModuleTokensPropertiesSources() != null) {

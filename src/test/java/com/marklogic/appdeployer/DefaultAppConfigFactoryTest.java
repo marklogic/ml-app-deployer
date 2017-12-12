@@ -3,6 +3,7 @@ package com.marklogic.appdeployer;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import com.marklogic.client.DatabaseClientFactory;
 import com.marklogic.client.ext.SecurityContextType;
@@ -72,13 +73,14 @@ public class DefaultAppConfigFactoryTest extends Assert {
 		assertEquals("appword", config.getAppServicesPassword());
 	}
 
-	/**
-     * As of 2.2.0.
-     */
     @Test
     public void allProperties() {
         Properties p = new Properties();
-        p.setProperty("mlHost", "prophost");
+
+        p.setProperty("mlCatchDeployExceptions", "true");
+	    p.setProperty("mlCatchUndeployExceptions", "true");
+
+	    p.setProperty("mlHost", "prophost");
         p.setProperty("mlAppName", "propname");
         p.setProperty("mlNoRestServer", "true");
         p.setProperty("mlUsername", "propuser1");
@@ -103,14 +105,16 @@ public class DefaultAppConfigFactoryTest extends Assert {
 	    p.setProperty("mlAppServicesSimpleSsl", "true");
 
 	    p.setProperty("mlContentForestsPerHost", "17");
+	    p.setProperty("mlCreateForests", "false");
 	    p.setProperty("mlForestsPerHost", "some-db,2,other-db,3");
         p.setProperty("mlModulePermissions", "some-perm,read,some-perm,update");
         p.setProperty("mlAdditionalBinaryExtensions", ".gradle,.properties");
         p.setProperty("mlConfigPath", "src/test/resources/sample-app/empty-ml-config");
-        p.setProperty("mlSimpleSsl", "anyvalue");
+        p.setProperty("mlSimpleSsl", "true");
         p.setProperty("mlContentDatabaseName", "my-content-db");
         p.setProperty("mlModulesDatabaseName", "my-modules");
         p.setProperty("mlSchemasDatabaseName", "my-schemas-db");
+        p.setProperty("mlTriggersDatabaseName", "my-triggers-db");
         p.setProperty("mlSchemasPath", "/my/schemas");
 	    p.setProperty("mlDeleteForests", "false");
         p.setProperty("mlDeleteReplicas", "false");
@@ -121,6 +125,7 @@ public class DefaultAppConfigFactoryTest extends Assert {
         p.setProperty("mlModuleTimestampsPath", "custom/timestamps/path.properties");
         p.setProperty("mlDeleteTestModules", "true");
         p.setProperty("mlDeleteTestModulesPattern", "/some/pattern");
+        p.setProperty("mlModulesLoaderThreadCount", "3");
 
         p.setProperty("mlModelsPath", "ml/models");
         p.setProperty("mlInstanceConverterPath", "ext/my/path");
@@ -135,14 +140,32 @@ public class DefaultAppConfigFactoryTest extends Assert {
 	    p.setProperty("mlResourceFilenamesToIncludeRegex", "qa-.*");
 
 	    p.setProperty("mlDatabaseNamesAndReplicaCounts", "Documents,1,Security,2");
+	    p.setProperty("mlDatabasesWithForestsOnOneHost", "Documents,Security");
+	    p.setProperty("mlDatabaseHosts", "Documents,host1|host2|host3,Security,host1|host2");
+
+	    p.setProperty("mlForestDataDirectory", "/data/path");
+	    p.setProperty("mlForestFastDataDirectory", "/fast/path");
+	    p.setProperty("mlForestLargeDataDirectory", "/large/path");
+
 	    p.setProperty("mlReplicaForestDataDirectory", "/var/data");
 	    p.setProperty("mlReplicaForestFastDataDirectory", "/var/fast");
 	    p.setProperty("mlReplicaForestLargeDataDirectory", "/var/large");
+
+	    p.setProperty("mlDatabaseDataDirectories", "Documents,/data/documents,Security,/data/security");
+	    p.setProperty("mlDatabaseFastDataDirectories", "Documents,/fast/documents,Security,/fast/security");
+	    p.setProperty("mlDatabaseLargeDataDirectories", "Documents,/large/documents,Security,/large/security");
+
+	    p.setProperty("mlDatabaseReplicaDataDirectories", "Documents,/data/replicas,Security,/data/security/replicas");
+	    p.setProperty("mlDatabaseReplicaFastDataDirectories", "Documents,/fast/replicas,Security,/fast/security/replicas");
+	    p.setProperty("mlDatabaseReplicaLargeDataDirectories", "Documents,/large/replicas,Security,/large/security/replicas");
 
 	    p.setProperty("mlSortRolesByDependencies", "false");
 
 	    sut = new DefaultAppConfigFactory(new SimplePropertySource(p));
         AppConfig config = sut.newAppConfig();
+
+        assertTrue(config.isCatchDeployExceptions());
+        assertTrue(config.isCatchUndeployExceptions());
 
         assertEquals("prophost", config.getHost());
         assertEquals("propname", config.getName());
@@ -172,6 +195,7 @@ public class DefaultAppConfigFactoryTest extends Assert {
 	    assertEquals(DatabaseClientFactory.SSLHostnameVerifier.ANY, config.getAppServicesSslHostnameVerifier());
 
 	    assertEquals((Integer) 17, config.getContentForestsPerHost());
+	    assertFalse(config.isCreateForests());
 	    Map<String, Integer> forestCounts = config.getForestCounts();
 	    assertEquals(2, (int)forestCounts.get("some-db"));
 	    assertEquals(3, (int)forestCounts.get("other-db"));
@@ -185,6 +209,7 @@ public class DefaultAppConfigFactoryTest extends Assert {
         assertEquals("my-content-db", config.getContentDatabaseName());
         assertEquals("my-modules", config.getModulesDatabaseName());
         assertEquals("my-schemas-db", config.getSchemasDatabaseName());
+        assertEquals("my-triggers-db", config.getTriggersDatabaseName());
         assertEquals("/my/schemas", config.getSchemasPath());
 	    assertFalse(config.isDeleteForests());
         assertFalse(config.isDeleteReplicas());
@@ -193,6 +218,7 @@ public class DefaultAppConfigFactoryTest extends Assert {
         assertFalse(config.isUseRoxyTokenPrefix());
         assertTrue(config.isDeleteTestModules());
         assertEquals("/some/pattern", config.getDeleteTestModulesPattern());
+        assertEquals(3, config.getModulesLoaderThreadCount());
 
         assertEquals("ml/models", config.getModelsPath());
         assertEquals("ext/my/path", config.getInstanceConverterPath());
@@ -215,9 +241,49 @@ public class DefaultAppConfigFactoryTest extends Assert {
 	    assertEquals("qa-.*", config.getResourceFilenamesIncludePattern().pattern());
 
 	    assertEquals("Documents,1,Security,2", config.getDatabaseNamesAndReplicaCounts());
+
+	    Set<String> set = config.getDatabasesWithForestsOnOneHost();
+	    assertEquals(2, set.size());
+	    assertTrue(set.contains("Documents"));
+	    assertTrue(set.contains("Security"));
+
+	    Map<String, Set<String>> databaseHosts = config.getDatabaseHosts();
+	    assertEquals(2, databaseHosts.size());
+	    assertEquals(3, databaseHosts.get("Documents").size());
+	    assertTrue(databaseHosts.get("Documents").contains("host1"));
+	    assertTrue(databaseHosts.get("Documents").contains("host2"));
+	    assertTrue(databaseHosts.get("Documents").contains("host3"));
+	    assertEquals(2, databaseHosts.get("Security").size());
+	    assertTrue(databaseHosts.get("Security").contains("host1"));
+	    assertTrue(databaseHosts.get("Security").contains("host2"));
+
+	    assertEquals("/data/path", config.getForestDataDirectory());
+	    assertEquals("/fast/path", config.getForestFastDataDirectory());
+	    assertEquals("/large/path", config.getForestLargeDataDirectory());
+
 	    assertEquals("/var/data", config.getReplicaForestDataDirectory());
 	    assertEquals("/var/fast", config.getReplicaForestFastDataDirectory());
 	    assertEquals("/var/large", config.getReplicaForestLargeDataDirectory());
+
+	    Map<String, String> map = config.getDatabaseDataDirectories();
+	    assertEquals("/data/documents", map.get("Documents"));
+	    assertEquals("/data/security", map.get("Security"));
+	    map = config.getDatabaseFastDataDirectories();
+	    assertEquals("/fast/documents", map.get("Documents"));
+	    assertEquals("/fast/security", map.get("Security"));
+	    map = config.getDatabaseLargeDataDirectories();
+	    assertEquals("/large/documents", map.get("Documents"));
+	    assertEquals("/large/security", map.get("Security"));
+
+	    map = config.getDatabaseReplicaDataDirectories();
+	    assertEquals("/data/replicas", map.get("Documents"));
+	    assertEquals("/data/security/replicas", map.get("Security"));
+	    map = config.getDatabaseReplicaFastDataDirectories();
+	    assertEquals("/fast/replicas", map.get("Documents"));
+	    assertEquals("/fast/security/replicas", map.get("Security"));
+	    map = config.getDatabaseReplicaLargeDataDirectories();
+	    assertEquals("/large/replicas", map.get("Documents"));
+	    assertEquals("/large/security/replicas", map.get("Security"));
 
 	    assertFalse(config.isSortRolesByDependencies());
     }
