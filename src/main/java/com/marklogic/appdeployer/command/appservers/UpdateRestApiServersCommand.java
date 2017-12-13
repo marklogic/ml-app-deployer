@@ -36,13 +36,12 @@ public class UpdateRestApiServersCommand extends AbstractCommand {
 
             ServerManager mgr = new ServerManager(context.getManageClient(), appConfig.getGroupName());
 
-            String payload = copyFileToString(f);
-
-            String json = payloadTokenReplacer.replaceTokens(payload, appConfig, false);
-            mgr.save(json);
+            saveResource(mgr, context, f);
 
             if (appConfig.isTestPortSet()) {
-                json = payloadTokenReplacer.replaceTokens(payload, appConfig, true);
+            	String payload = copyFileToString(f);
+                String json = payloadTokenReplacer.replaceTokens(payload, appConfig, true);
+                adjustPayloadBeforeSavingResource(mgr, context, f, json);
                 mgr.save(json);
             }
         } else {

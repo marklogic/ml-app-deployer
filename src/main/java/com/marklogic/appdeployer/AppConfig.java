@@ -199,6 +199,12 @@ public class AppConfig {
 	private Pattern resourceFilenamesExcludePattern;
 	private Pattern resourceFilenamesIncludePattern;
 
+	//Fields to exclude from JSON payloads
+	private String[] excludeFields;
+	//Fields to include in JSON Payloads and its values
+	// example: triple-index,true
+	private Map<String, String> includeFields;
+
 	private Map<String, Object> additionalProperties = new HashMap<>();
 
 	public AppConfig() {
@@ -1105,5 +1111,21 @@ public class AppConfig {
 
 	public void setDatabaseHosts(Map<String, Set<String>> databaseHosts) {
 		this.databaseHosts = databaseHosts;
+	}
+
+	public void setExcludeFields(String[] excludeFields) {
+    	this.excludeFields = excludeFields;
+	}
+
+	public String[] getExcludeFields() {
+    	return this.excludeFields;
+	}
+
+	public void setIncludeFields(Map<String, String> includeFields) {
+    	this.includeFields = includeFields;
+	}
+
+	public Map<String, String> getIncludeFields() {
+    	return this.includeFields;
 	}
 }

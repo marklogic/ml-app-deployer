@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -25,6 +26,7 @@ public abstract class AbstractCommand extends LoggingObject implements Command {
 
     protected PayloadTokenReplacer payloadTokenReplacer = new DefaultPayloadTokenReplacer();
     private FilenameFilter resourceFilenameFilter = new ResourceFilenameFilter();
+    private PayloadPropertyFilter payloadPropertyFilter = new PayloadPropertyFilter();
 
     /**
      * A subclass can set the executeSortOrder attribute to whatever value it needs.
@@ -151,6 +153,19 @@ public abstract class AbstractCommand extends LoggingObject implements Command {
 	 * @return
 	 */
     protected String adjustPayloadBeforeSavingResource(ResourceManager mgr, CommandContext context, File f, String payload) {
+    	if (context.getAppConfig().getExcludeFields() != null) {
+    		for(String field : context.getAppConfig().getExcludeFields()) {
+    			logger.info("Excluding property %s from payload", field);
+				payload = payloadPropertyFilter.excludeProperty(payload, field);
+			}
+		}
+		if (context.getAppConfig().getIncludeFields() != null) {
+    		Map<String, String> field = context.getAppConfig().getIncludeFields();
+    		for(String key : field.keySet()) {
+				logger.info("Adding property %s with value %s payload", key, field.get(key));
+    			payload = payloadPropertyFilter.includeProperty(payload, key, field.get(key));
+			}
+		}
     	return payload;
     }
 
