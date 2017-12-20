@@ -199,11 +199,10 @@ public class AppConfig {
 	private Pattern resourceFilenamesExcludePattern;
 	private Pattern resourceFilenamesIncludePattern;
 
-	//Fields to exclude from JSON payloads
-	private String[] excludeFields;
-	//Fields to include in JSON Payloads and its values
-	// example: triple-index,true
-	private Map<String, String> includeFields;
+	//Properties to exclude from JSON payloads
+	private String[] excludeProperties;
+	//Properties to include in JSON Payloads and its values
+	private String[] includeProperties;
 
 	private Map<String, Object> additionalProperties = new HashMap<>();
 
@@ -1113,19 +1112,23 @@ public class AppConfig {
 		this.databaseHosts = databaseHosts;
 	}
 
-	public void setExcludeFields(String[] excludeFields) {
-    	this.excludeFields = excludeFields;
+	public void setExcludeProperties(String[] excludeFields) throws RuntimeException {
+    	if (this.includeProperties != null)
+    		throw new RuntimeException("Setting mlExcludeProperties and mlIncludeProperties at the same time is not permitted");
+    	this.excludeProperties = excludeFields;
 	}
 
-	public String[] getExcludeFields() {
-    	return this.excludeFields;
+	public String[] getExcludeProperties() {
+    	return this.excludeProperties;
 	}
 
-	public void setIncludeFields(Map<String, String> includeFields) {
-    	this.includeFields = includeFields;
+	public void setIncludeProperties(String[] includeProperties) {
+		if (this.excludeProperties != null)
+			throw new RuntimeException("Setting mlExcludeProperties and mlIncludeProperties at the same time is not permitted");
+    	this.includeProperties = includeProperties;
 	}
 
-	public Map<String, String> getIncludeFields() {
-    	return this.includeFields;
+	public String[] getIncludeProperties() {
+    	return this.includeProperties;
 	}
 }

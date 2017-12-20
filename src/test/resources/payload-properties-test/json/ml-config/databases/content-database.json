@@ -1,4 +1,5 @@
 {
   "database-name": "%%DATABASE%%",
-	"triggers-database": "%%TRIGGERS_DATABASE%%"
+	"triggers-database": "Triggers",
+	"triple-index" : "false"
 }

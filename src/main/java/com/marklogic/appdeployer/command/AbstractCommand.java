@@ -1,6 +1,7 @@
 package com.marklogic.appdeployer.command;
 
 import com.marklogic.client.ext.helper.LoggingObject;
+import com.marklogic.mgmt.PayloadParser;
 import com.marklogic.mgmt.resource.ResourceManager;
 import com.marklogic.mgmt.SaveReceipt;
 import org.springframework.util.FileCopyUtils;
@@ -26,7 +27,7 @@ public abstract class AbstractCommand extends LoggingObject implements Command {
 
     protected PayloadTokenReplacer payloadTokenReplacer = new DefaultPayloadTokenReplacer();
     private FilenameFilter resourceFilenameFilter = new ResourceFilenameFilter();
-    private PayloadPropertyFilter payloadPropertyFilter = new PayloadPropertyFilter();
+    private PayloadParser payloadParser = new PayloadParser();
 
     /**
      * A subclass can set the executeSortOrder attribute to whatever value it needs.
@@ -153,18 +154,15 @@ public abstract class AbstractCommand extends LoggingObject implements Command {
 	 * @return
 	 */
     protected String adjustPayloadBeforeSavingResource(ResourceManager mgr, CommandContext context, File f, String payload) {
-    	if (context.getAppConfig().getExcludeFields() != null) {
-    		for(String field : context.getAppConfig().getExcludeFields()) {
-    			logger.info("Excluding property %s from payload", field);
-				payload = payloadPropertyFilter.excludeProperty(payload, field);
-			}
+    	if (context.getAppConfig().getExcludeProperties() != null) {
+    		String[] properties = context.getAppConfig().getExcludeProperties();
+    		logger.info("Excluding property %s from payload", Arrays.asList(properties));
+			payload = payloadParser.excludeProperties(payload, properties);
 		}
-		if (context.getAppConfig().getIncludeFields() != null) {
-    		Map<String, String> field = context.getAppConfig().getIncludeFields();
-    		for(String key : field.keySet()) {
-				logger.info("Adding property %s with value %s payload", key, field.get(key));
-    			payload = payloadPropertyFilter.includeProperty(payload, key, field.get(key));
-			}
+		if (context.getAppConfig().getIncludeProperties() != null) {
+			String[] properties = context.getAppConfig().getIncludeProperties();
+			logger.info("Including property %s from payload", Arrays.asList(properties));
+			payload = payloadParser.includeProperties(payload, properties);
 		}
     	return payload;
     }

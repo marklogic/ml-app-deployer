@@ -633,17 +633,18 @@ public class DefaultAppConfigFactory extends PropertySourceFactory implements Ap
 			c.setSortRolesByDependencies(Boolean.parseBoolean(prop));
 		}
 
-		prop = getProperty("mlExcludeFields");
+		prop = getProperty("mlExcludeProperties");
 		if (prop != null) {
 			String[] values = prop.split(",");
-			logger.info("Excluding fields from payload: " + Arrays.asList(values));
-			c.setExcludeFields(values);
+			logger.info("Excluding properties from payload: " + Arrays.asList(values));
+			c.setExcludeProperties(values);
 		}
 
-		prop = getProperty("mlIncludeFields");
+		prop = getProperty("mlIncludeProperties");
 		if (prop != null) {
-			logger.info("Including fields in payload " + prop);
-			c.setIncludeFields(buildMapFromCommaDelimitedString(prop));
+			String[] values = prop.split(",");
+			logger.info("Including properties from payload: " + Arrays.asList(values));
+			c.setIncludeProperties(values);
 		}
 
 		return c;
