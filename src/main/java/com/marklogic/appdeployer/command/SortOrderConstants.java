@@ -3,7 +3,8 @@ package com.marklogic.appdeployer.command;
 public abstract class SortOrderConstants {
 
     public static Integer DEPLOY_GROUPS = 5;
-
+    public static Integer ASSIGN_HOSTS_TO_GROUPS = 7;
+    
     public static Integer DEPLOY_PRIVILEGES = 10;
     public static Integer DEPLOY_ROLES = 20;
     public static Integer DEPLOY_USERS = 30;
@@ -78,6 +79,7 @@ public abstract class SortOrderConstants {
     // Protected paths reference roles
 	public static Integer DELETE_PROTECTED_PATHS = 9080;
 
+    public static Integer UNASSIGN_HOSTS_FROM_GROUPS = 8700;
 	public static Integer DELETE_GROUPS = 8600;
 
 	public static Integer DELETE_MIMETYPES = 8500;
