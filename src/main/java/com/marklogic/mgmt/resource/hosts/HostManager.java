@@ -50,8 +50,6 @@ public class HostManager extends AbstractManager {
     public ResponseEntity<String> setHostToGroup(String hostIdOrName, String groupIdOrName) {
         String json = format("{\"group\":\"%s\"}", groupIdOrName);
         String url = format("/manage/v2/hosts/%s/properties", hostIdOrName);
-        System.out.println("url: " + url);
-        System.out.println("json: " + json);
         return client.putJson(url, json);
     }
 }

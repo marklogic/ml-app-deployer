@@ -18,13 +18,10 @@ public class AssignHostsToGroupsCommand extends AbstractUndoableCommand {
 
 	@Override
 	public void execute(CommandContext context) {
-		System.out.println("Executing AssignHostsToGroupsCommand");
 		Map<String, String> hostGroups = context.getAppConfig().getHostGroups();
 		HostManager mgr = new HostManager(context.getManageClient());
 		for (Map.Entry<String, String> entry : hostGroups.entrySet()) {
-			System.out.println(format("%s -> %s", entry.getKey(), entry.getValue()));
 			ResponseEntity<String> response = mgr.setHostToGroup(entry.getKey(), entry.getValue());
-			System.out.println("Status Code: " + response.getStatusCode());
 		}
 	}
 
