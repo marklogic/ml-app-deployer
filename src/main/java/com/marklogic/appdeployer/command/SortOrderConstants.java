@@ -3,7 +3,6 @@ package com.marklogic.appdeployer.command;
 public abstract class SortOrderConstants {
 
     public static Integer DEPLOY_GROUPS = 5;
-    public static Integer ASSIGN_HOSTS_TO_GROUPS = 7;
     
     public static Integer DEPLOY_PRIVILEGES = 10;
     public static Integer DEPLOY_ROLES = 20;
@@ -16,6 +15,7 @@ public abstract class SortOrderConstants {
     public static Integer DEPLOY_MIMETYPES = 90;
 	public static Integer DEPLOY_PROTECTED_PATHS = 95;
 	public static Integer DEPLOY_QUERY_ROLESETS = 97;
+    public static Integer ASSIGN_HOSTS_TO_GROUPS = 98;
 
     public static Integer DEPLOY_TRIGGERS_DATABASE = 100;
     public static Integer DEPLOY_SCHEMAS_DATABASE = 100;
