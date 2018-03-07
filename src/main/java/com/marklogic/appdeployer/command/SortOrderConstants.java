@@ -79,8 +79,8 @@ public abstract class SortOrderConstants {
     // Protected paths reference roles
 	public static Integer DELETE_PROTECTED_PATHS = 9080;
 
-    public static Integer UNASSIGN_HOSTS_FROM_GROUPS = 8700;
 	public static Integer DELETE_GROUPS = 8600;
+    public static Integer UNASSIGN_HOSTS_FROM_GROUPS = 8590;
 
 	public static Integer DELETE_MIMETYPES = 8500;
 

@@ -5,6 +5,7 @@ import java.util.Map;
 import com.marklogic.appdeployer.command.AbstractUndoableCommand;
 import com.marklogic.appdeployer.command.CommandContext;
 import com.marklogic.appdeployer.command.SortOrderConstants;
+import com.marklogic.mgmt.admin.AdminManager;
 import com.marklogic.mgmt.resource.appservers.ServerManager;
 import com.marklogic.mgmt.resource.hosts.HostManager;
 
@@ -21,6 +22,7 @@ public class AssignHostsToGroupsCommand extends AbstractUndoableCommand {
 	@Override
 	public void execute(CommandContext context) {
 		Map<String, String> hostGroups = context.getAppConfig().getHostGroups();
+	    AdminManager adminManager = context.getAdminManager();
 		HostManager mgr = new HostManager(context.getManageClient());
 		for (Map.Entry<String, String> entry : hostGroups.entrySet()) {
 			String hostName = entry.getKey();
@@ -40,13 +42,19 @@ public class AssignHostsToGroupsCommand extends AbstractUndoableCommand {
 	        	}
 	        }
 			mgr.setHostToGroup(hostName, groupName);
+			adminManager.waitForRestart();
 		}
 	}
 
 
 	@Override
 	public void undo(CommandContext context) {
-		// TODO Auto-generated method stub
-		
+		Map<String, String> hostGroups = context.getAppConfig().getHostGroups();
+	    AdminManager adminManager = context.getAdminManager();
+		HostManager mgr = new HostManager(context.getManageClient());
+		for (Map.Entry<String, String> entry : hostGroups.entrySet()) {
+			mgr.setHostToGroup(entry.getKey(), "Default");
+			adminManager.waitForRestart();
+		}
 	}
 }
