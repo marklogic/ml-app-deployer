@@ -16,8 +16,6 @@ public class AssignHostsToGroupsCommand extends AbstractUndoableCommand {
 	private static final String MANAGE_SERVER_JSON_TEMPLATE = "{\"server-name\":\"%s\", \"group-name\":\"%s\", \"server-type\":\"http\", \"root\":\"Apps/\", \"port\":8002, \"content-database\":\"App-Services\", \"error-handler\":\"manage/error-handler.xqy\", \"url-rewriter\":\"manage/rewriter.xqy\", \"privilege\":\"http://marklogic.com/xdmp/privileges/manage\"}";
 	private static final String APP_SERVER_NAME = "App-Services";
 	private static final String APP_SERVER_JSON_TEMPLATE = "{\"server-name\":\"%s\", \"group-name\":\"%s\", \"server-type\":\"http\", \"root\":\"/\", \"port\":8000, \"modules-database\":\"Modules\", \"content-database\":\"Documents\", \"error-handler\":\"/MarkLogic/rest-api/8000-error-handler.xqy\", \"url-rewriter\":\"/MarkLogic/rest-api/8000-rewriter.xml\", \"rewrite-resolves-globally\":true}";
-	private static final String ADMIN_SERVER_NAME = "Admin";
-	private static final String ADMIN_SERVER_UPDATE_JSON_TEMPLATE = "{\"server-name\":\"%s\", \"url-rewriter\":\"rewriter.xqy\"}";
 
 	public AssignHostsToGroupsCommand() {
         setExecuteSortOrder(SortOrderConstants.ASSIGN_HOSTS_TO_GROUPS);
@@ -59,12 +57,6 @@ public class AssignHostsToGroupsCommand extends AbstractUndoableCommand {
 	        	serverMgr.save(manageServerPayload);
 				logger.info(format("Created the %s appserver in target group %s", APP_SERVER_NAME, groupName));
 	        }
-
-			// When new groups are created, an Admin server is automatically created in that group.
-			// However, the Admin server's rewrite property is empty - causing problems with reading the timestamp
-			// This fix should probably happen when the group is created.
-            String adminServerPayload = format(ADMIN_SERVER_UPDATE_JSON_TEMPLATE, ADMIN_SERVER_NAME, groupName);
-			serverMgr.save(adminServerPayload);
 			
 			if (hostMgr.getAssignedGroupName(hostName) != groupName) {
 				hostMgr.setHostToGroup(hostName, groupName);

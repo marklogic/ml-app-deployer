@@ -1,15 +1,20 @@
 package com.marklogic.appdeployer.command.groups;
 
+import java.io.File;
+
 import com.marklogic.appdeployer.command.AbstractResourceCommand;
 import com.marklogic.appdeployer.command.CommandContext;
 import com.marklogic.appdeployer.command.SortOrderConstants;
-import com.marklogic.mgmt.resource.ResourceManager;
 import com.marklogic.mgmt.SaveReceipt;
+import com.marklogic.mgmt.resource.ResourceManager;
+import com.marklogic.mgmt.resource.appservers.ServerManager;
 import com.marklogic.mgmt.resource.groups.GroupManager;
-
-import java.io.File;
+import com.marklogic.rest.util.Fragment;
 
 public class DeployGroupsCommand extends AbstractResourceCommand {
+
+	private static final String ADMIN_SERVER_NAME = "Admin";
+	private static final String ADMIN_SERVER_UPDATE_JSON_TEMPLATE = "{\"server-name\":\"%s\", \"url-rewriter\":\"rewriter.xqy\"}";
 
     public DeployGroupsCommand() {
         setExecuteSortOrder(SortOrderConstants.DEPLOY_GROUPS);
@@ -35,11 +40,21 @@ public class DeployGroupsCommand extends AbstractResourceCommand {
     protected void afterResourceSaved(ResourceManager mgr, CommandContext context, File resourceFile,
             SaveReceipt receipt) {
         String payload = receipt.getPayload();
-        if (payload != null && payload.contains("cache-size") && context.getAdminManager() != null) {
-            if (logger.isDebugEnabled()) {
-                logger.info("Group payload contains cache-size parameter, so waiting for ML to restart");
-            }
-            context.getAdminManager().waitForRestart();
+        if (payload != null) {
+        	if (payload.contains("cache-size") && context.getAdminManager() != null) {
+                if (logger.isDebugEnabled()) {
+                    logger.info("Group payload contains cache-size parameter, so waiting for ML to restart");
+                }
+                context.getAdminManager().waitForRestart();
+        	}
+        	Fragment xml = new Fragment(payload);
+        	String groupName = xml.getElementValue("/m:group-properties/m:group-name");
+
+			// When new groups are created, an Admin server is automatically created in that group.
+			// However, the Admin server's rewrite property is empty - causing problems with reading the timestamp
+            String adminServerPayload = format(ADMIN_SERVER_UPDATE_JSON_TEMPLATE, ADMIN_SERVER_NAME, groupName);
+			ServerManager serverMgr = new ServerManager(context.getManageClient(), groupName);
+			serverMgr.save(adminServerPayload);
         }
     }
 }
