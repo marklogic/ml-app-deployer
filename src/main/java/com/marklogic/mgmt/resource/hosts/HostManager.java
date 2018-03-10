@@ -52,4 +52,9 @@ public class HostManager extends AbstractManager {
         String url = format("/manage/v2/hosts/%s/properties", hostIdOrName);
         return client.putJson(url, json);
     }
+
+	public String getAssignedGroupName(String hostIdOrName) {
+		String url = format("/manage/v2/hosts/%s/properties", hostIdOrName);
+		return payloadParser.getPayloadFieldValue(client.getJson(url), "group");
+	}
 }

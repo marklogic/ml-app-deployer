@@ -66,8 +66,10 @@ public class AssignHostsToGroupsCommand extends AbstractUndoableCommand {
             String adminServerPayload = format(ADMIN_SERVER_UPDATE_JSON_TEMPLATE, ADMIN_SERVER_NAME, groupName);
 			serverMgr.save(adminServerPayload);
 			
-			hostMgr.setHostToGroup(hostName, groupName);
-			requiresRestart = true;
+			if (hostMgr.getAssignedGroupName(hostName) != groupName) {
+				hostMgr.setHostToGroup(hostName, groupName);
+				requiresRestart = true;
+			}
 		}
 		return requiresRestart;
 	}
@@ -88,8 +90,11 @@ public class AssignHostsToGroupsCommand extends AbstractUndoableCommand {
 		Map<String, String> hostGroups = context.getAppConfig().getHostGroups();
 		HostManager hostMgr = new HostManager(context.getManageClient());
 		for (Map.Entry<String, String> entry : hostGroups.entrySet()) {
-			hostMgr.setHostToGroup(entry.getKey(), DEFAULT_GROUP_NAME);
-			requiresRestart = true;
+			String hostName = entry.getKey();
+			if (hostMgr.getAssignedGroupName(hostName) != DEFAULT_GROUP_NAME) {
+				hostMgr.setHostToGroup(hostName, DEFAULT_GROUP_NAME);
+				requiresRestart = true;
+			}
 		}
 		return requiresRestart;
 	}
