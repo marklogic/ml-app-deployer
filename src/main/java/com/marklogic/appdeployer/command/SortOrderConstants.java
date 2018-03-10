@@ -15,6 +15,10 @@ public abstract class SortOrderConstants {
     public static Integer DEPLOY_MIMETYPES = 90;
 	public static Integer DEPLOY_PROTECTED_PATHS = 95;
 	public static Integer DEPLOY_QUERY_ROLESETS = 97;
+	
+	// Hosts need to be assigned to their group before databases are created.
+	// This is so that when forests are created based on the mlDatabaseGroups
+	// then the forests will be created on the correct hosts.
     public static Integer ASSIGN_HOSTS_TO_GROUPS = 98;
 
     public static Integer DEPLOY_TRIGGERS_DATABASE = 100;
