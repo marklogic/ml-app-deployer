@@ -33,30 +33,21 @@ public class AssignHostsToGroupsCommand extends AbstractUndoableCommand {
 			// First, ensure a Manage and App-Services servers exists for the group
 			// This issue is fixed in ML 9.0-3 (https://bugtrack.marklogic.com/46909)
 			ServerManager serverMgr = new ServerManager(context.getManageClient(), groupName);
-			try {
-				String serverResponse = serverMgr.getPropertiesAsJson(MANAGE_SERVER_NAME, "group-id="+groupName);
-				System.out.println("serverResponse: " + serverResponse);
-	        } catch (Exception e) {
-	        	if (e.getMessage().contains("404 Not Found")) {
-	                String manageServerPayload = format(MANAGE_SERVER_JSON_TEMPLATE, MANAGE_SERVER_NAME, groupName);
-	        		serverMgr.save(manageServerPayload);
-	        	} else {
-	        		logger.error("Error checking for Manage server in target group: " + e.getMessage());
-	        		throw e;
-	        	}
+			if (serverMgr.exists(MANAGE_SERVER_NAME, "group-id="+groupName)) {
+				logger.info(format("%s appserver already exists in target group %s", MANAGE_SERVER_NAME, groupName));
+			} else {
+	        	String manageServerPayload = format(MANAGE_SERVER_JSON_TEMPLATE, MANAGE_SERVER_NAME, groupName);
+	        	serverMgr.save(manageServerPayload);
+				logger.info(format("Created the %s appserver in target group %s", MANAGE_SERVER_NAME, groupName));
 	        }
-			try {
-				String serverResponse = serverMgr.getPropertiesAsJson(APP_SERVER_NAME, "group-id="+groupName);
-				System.out.println("serverResponse: " + serverResponse);
-	        } catch (Exception e) {
-	        	if (e.getMessage().contains("404 Not Found")) {
-	                String appServicesServerPayload = format(APP_SERVER_JSON_TEMPLATE, APP_SERVER_NAME, groupName);
-	        		serverMgr.save(appServicesServerPayload);
-	        	} else {
-	        		logger.error("Error checking for App-Services server in target group: " + e.getMessage());
-	        		throw e;
-	        	}
+			if (serverMgr.exists(APP_SERVER_NAME, "group-id="+groupName)) {
+				logger.info(format("%s appserver already exists in target group %s", APP_SERVER_NAME, groupName));
+			} else {
+	        	String manageServerPayload = format(APP_SERVER_JSON_TEMPLATE, APP_SERVER_NAME, groupName);
+	        	serverMgr.save(manageServerPayload);
+				logger.info(format("Created the %s appserver in target group %s", APP_SERVER_NAME, groupName));
 	        }
+
 			// When new groups are created, an Admin server is automatically created in that group.
 			// However, the Admin server's rewrite property is empty - causing problems with reading the timestamp
             String adminServerPayload = format(ADMIN_SERVER_UPDATE_JSON_TEMPLATE, ADMIN_SERVER_NAME, groupName);
