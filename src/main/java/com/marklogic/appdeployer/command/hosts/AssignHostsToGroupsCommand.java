@@ -5,7 +5,6 @@ import java.util.Map;
 import com.marklogic.appdeployer.command.AbstractUndoableCommand;
 import com.marklogic.appdeployer.command.CommandContext;
 import com.marklogic.appdeployer.command.SortOrderConstants;
-import com.marklogic.mgmt.admin.ActionRequiringRestart;
 import com.marklogic.mgmt.api.server.AppServicesServer;
 import com.marklogic.mgmt.api.server.ManageServer;
 import com.marklogic.mgmt.api.server.Server;
@@ -35,12 +34,7 @@ public class AssignHostsToGroupsCommand extends AbstractUndoableCommand {
 
 	@Override
 	public void execute(CommandContext context) {
-		context.getAdminManager().invokeActionRequiringRestart(new ActionRequiringRestart() {
-			@Override
-			public boolean execute() {
-				return assignHostsToGroups(context);
-			}
-		});
+		context.getAdminManager().invokeActionRequiringRestart(() -> assignHostsToGroups(context)); 
 	}
 	
 	protected boolean assignHostsToGroups(CommandContext context) {
@@ -80,12 +74,7 @@ public class AssignHostsToGroupsCommand extends AbstractUndoableCommand {
 
 	@Override
 	public void undo(CommandContext context) {
-		context.getAdminManager().invokeActionRequiringRestart(new ActionRequiringRestart() {
-			@Override
-			public boolean execute() {
-				return assignHostsToDefault(context);
-			}
-		});
+		context.getAdminManager().invokeActionRequiringRestart(() -> assignHostsToDefault(context)); 
 	}
 	
 	protected boolean assignHostsToDefault(CommandContext context) {
