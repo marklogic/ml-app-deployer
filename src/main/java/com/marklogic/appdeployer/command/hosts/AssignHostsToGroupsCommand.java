@@ -48,14 +48,14 @@ public class AssignHostsToGroupsCommand extends AbstractUndoableCommand {
 			// First, ensure a Manage and App-Services servers exists for the group
 			// This issue is fixed in ML 9.0-3 (https://bugtrack.marklogic.com/46909)
 			ServerManager serverMgr = new ServerManager(context.getManageClient(), groupName);
-			if (serverMgr.exists(ManageServer.MANAGE_SERVER_NAME, "group-id="+groupName)) {
+			if (serverMgr.exists(ManageServer.MANAGE_SERVER_NAME)) {
 				logger.info(format("%s appserver already exists in target group %s", ManageServer.MANAGE_SERVER_NAME, groupName));
 			} else {
 				manageServerTemplate.setGroupName(groupName);
 	        	serverMgr.save(manageServerTemplate.getJson());
 				logger.info(format("Created the %s appserver in target group %s", ManageServer.MANAGE_SERVER_NAME, groupName));
 	        }
-			if (serverMgr.exists(AppServicesServer.APP_SERVICES_SERVER_NAME, "group-id="+groupName)) {
+			if (serverMgr.exists(AppServicesServer.APP_SERVICES_SERVER_NAME)) {
 				logger.info(format("%s appserver already exists in target group %s", AppServicesServer.APP_SERVICES_SERVER_NAME, groupName));
 			} else {
 				appServicesServerTemplate.setGroupName(groupName);
@@ -63,7 +63,9 @@ public class AssignHostsToGroupsCommand extends AbstractUndoableCommand {
 				logger.info(format("Created the %s appserver in target group %s", AppServicesServer.APP_SERVICES_SERVER_NAME, groupName));
 	        }
 			
-			if (hostMgr.getAssignedGroupName(hostName) != groupName) {
+			
+
+			if (!groupName.equals(hostMgr.getAssignedGroupName(hostName))) {
 				hostMgr.setHostToGroup(hostName, groupName);
 				requiresRestart = true;
 			}
