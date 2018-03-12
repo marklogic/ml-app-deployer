@@ -24,14 +24,6 @@ public class AssignHostsToGroupsCommand extends AbstractUndoableCommand {
         appServicesServerTemplate = new AppServicesServer();
     }
 
-	public void setManageServerTemplate(Server manageServerTemplate) {
-		this.manageServerTemplate = manageServerTemplate;
-	}
-    
-	public void setAppServicesServerTemplate(Server appServicesServerTemplate) {
-		this.appServicesServerTemplate = appServicesServerTemplate;
-	}
-
 	@Override
 	public void execute(CommandContext context) {
 		context.getAdminManager().invokeActionRequiringRestart(() -> assignHostsToGroups(context)); 
@@ -91,5 +83,21 @@ public class AssignHostsToGroupsCommand extends AbstractUndoableCommand {
 			}
 		}
 		return requiresRestart;
+	}
+
+	public Server getManageServerTemplate() {
+		return manageServerTemplate;
+	}
+
+	public void setManageServerTemplate(Server manageServerTemplate) {
+		this.manageServerTemplate = manageServerTemplate;
+	}
+
+	public Server getAppServicesServerTemplate() {
+		return appServicesServerTemplate;
+	}
+    
+	public void setAppServicesServerTemplate(Server appServicesServerTemplate) {
+		this.appServicesServerTemplate = appServicesServerTemplate;
 	}
 }
