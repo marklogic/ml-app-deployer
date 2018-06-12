@@ -620,6 +620,11 @@ public class DefaultAppConfigFactory extends PropertySourceFactory implements Ap
 			logger.info("Will include only these properties in all resource payloads: " + Arrays.asList(values));
 			config.setIncludeProperties(values);
 		});
+
+		propertyConsumerMap.put("mlIncremental", (config, prop) -> {
+			logger.info("Deploy incrementally when possible: " + prop);
+			config.setIncrementalDeploy(Boolean.parseBoolean(prop));
+		});
 	}
 
 	@Override

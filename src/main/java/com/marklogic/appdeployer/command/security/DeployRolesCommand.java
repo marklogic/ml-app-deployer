@@ -1,6 +1,6 @@
 package com.marklogic.appdeployer.command.security;
 
-import com.marklogic.appdeployer.command.AbstractResourceCommand;
+import com.marklogic.appdeployer.command.AbstractIncrementalResourceCommand;
 import com.marklogic.appdeployer.command.CommandContext;
 import com.marklogic.appdeployer.command.SortOrderConstants;
 import com.marklogic.mgmt.api.API;
@@ -14,12 +14,15 @@ import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 
-public class DeployRolesCommand extends AbstractResourceCommand {
+public class DeployRolesCommand extends AbstractIncrementalResourceCommand {
 
 	// Used internally
 	private boolean removeRolesAndPermissionsDuringDeployment = false;
+	private boolean incrementalMode;
+	private boolean secondPass = false;
 	private ResourceMapper resourceMapper;
 	private Set<String> roleNamesThatDontNeedToBeRedeployed;
+	private Set<String> roleNamesThatWereSkipped;
 
 	public DeployRolesCommand() {
 		setExecuteSortOrder(SortOrderConstants.DEPLOY_ROLES);
@@ -35,16 +38,21 @@ public class DeployRolesCommand extends AbstractResourceCommand {
 	 */
 	@Override
 	public void execute(CommandContext context) {
+		incrementalMode = context.getAppConfig().getIncrementalDeploy();
 		removeRolesAndPermissionsDuringDeployment = true;
+		secondPass = false;
 		if (logger.isInfoEnabled()) {
 			logger.info("Deploying roles minus their default permissions and references to roles");
+			logger.info("IncrementalMode: " + incrementalMode);
 		}
 		roleNamesThatDontNeedToBeRedeployed = new HashSet<>();
+		roleNamesThatWereSkipped = new HashSet<>();
 		super.execute(context);
 		if (logger.isInfoEnabled()) {
 			logger.info("Redeploying roles that have default permissions and/or references to roles");
 		}
 		removeRolesAndPermissionsDuringDeployment = false;
+		secondPass = true;
 		super.execute(context);
 	}
 
@@ -90,6 +98,11 @@ public class DeployRolesCommand extends AbstractResourceCommand {
 				logger.info("Not redeploying role " + role.getRoleName() + ", as it does not have any default permissions or references to other roles");
 			}
 			return null;
+		} if (roleNamesThatWereSkipped.contains(role.getRoleName())) {
+			if (logger.isInfoEnabled()) {
+				logger.info("Not redeploying role " + role.getRoleName() + ", as it was skipped the first time through");
+			}
+			return null;
 		}
 		// Else log a message to indicate that the role is being redeployed
 		else if (logger.isInfoEnabled()) {
@@ -106,6 +119,27 @@ public class DeployRolesCommand extends AbstractResourceCommand {
 	@Override
 	protected ResourceManager getResourceManager(CommandContext context) {
 		return new RoleManager(context.getManageClient());
+	}
+
+	@Override
+	protected void skippingResource(CommandContext context, File f) {
+		if (resourceMapper == null) {
+			API api = new API(context.getManageClient(), context.getAdminManager());
+			resourceMapper = new DefaultResourceMapper(api);
+		}
+
+		String payload = copyFileToString(f, context);
+		Role role = resourceMapper.readResource(payload, Role.class);
+		roleNamesThatWereSkipped.add(role.getRoleName());
+	}
+
+	@Override
+	protected Boolean incrementalMode() {
+		return (incrementalMode && !secondPass);
+	}
+
+	public void setIncrementalMode(boolean incrementalMode) {
+		this.incrementalMode = incrementalMode;
 	}
 }
 
