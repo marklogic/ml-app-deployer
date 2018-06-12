@@ -18,7 +18,7 @@ public class DeployRolesCommand extends AbstractIncrementalResourceCommand {
 
 	// Used internally
 	private boolean removeRolesAndPermissionsDuringDeployment = false;
-	private boolean incrementalMode = false;
+	private boolean incrementalMode;
 	private boolean secondPass = false;
 	private ResourceMapper resourceMapper;
 	private Set<String> roleNamesThatDontNeedToBeRedeployed;
@@ -38,6 +38,7 @@ public class DeployRolesCommand extends AbstractIncrementalResourceCommand {
 	 */
 	@Override
 	public void execute(CommandContext context) {
+		incrementalMode = context.getAppConfig().getIncrementalDeploy();
 		removeRolesAndPermissionsDuringDeployment = true;
 		secondPass = false;
 		if (logger.isInfoEnabled()) {

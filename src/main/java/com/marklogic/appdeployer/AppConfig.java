@@ -114,6 +114,7 @@ public class AppConfig {
 	private String deleteTestModulesPattern = "/test/**";
 	private int modulesLoaderThreadCount = 8;
 	private Integer modulesLoaderBatchSize;
+	private boolean incrementalDepoy = false;
 
     private String schemasPath;
 
@@ -1173,6 +1174,14 @@ public class AppConfig {
 		this.modulesLoaderBatchSize = modulesLoaderBatchSize;
 	}
 
+	public boolean getIncrementalDeploy() {
+		return incrementalDepoy;
+	}
+
+	public void setIncrementalDeploy(boolean incrementalDepoy) {
+		this.incrementalDepoy = incrementalDepoy;
+	}
+
 	public String getModelsDatabase() {
 		return modelsDatabase;
 	}
@@ -1204,4 +1213,5 @@ public class AppConfig {
 	public void setForestNamingStrategies(Map<String, ForestNamingStrategy> forestNamingStrategies) {
 		this.forestNamingStrategies = forestNamingStrategies;
 	}
+
 }
