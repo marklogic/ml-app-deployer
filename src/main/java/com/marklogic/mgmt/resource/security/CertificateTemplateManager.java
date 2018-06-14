@@ -115,7 +115,9 @@ public class CertificateTemplateManager extends AbstractResourceManager {
 	 */
 	public boolean certificateExists(String templateIdOrName) {
 		Fragment response = getCertificatesForTemplate(templateIdOrName);
-		logger.info(format("Checking if %s template has certificates --> for template: %s", templateIdOrName, response.getPrettyXml()));
+		if (logger.isDebugEnabled()) {
+			logger.debug(format("Checking if %s template has certificates --> for template: %s", templateIdOrName, response.getPrettyXml()));
+		}
 
 		return response.elementExists("/msec:certificate-list/msec:certificate");
 	}
