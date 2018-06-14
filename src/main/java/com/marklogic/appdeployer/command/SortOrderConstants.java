@@ -8,7 +8,7 @@ public abstract class SortOrderConstants {
 	public static Integer DEPLOY_CERTIFICATE_AUTHORITIES = 20;
 	public static Integer DEPLOY_CERTIFICATE_TEMPLATES = 24;
 	public static Integer GENERATE_TEMPORARY_CERTIFICATE = 25;
-	public static Integer INSERT_CERTIFICATE_HOSTS_OPERATIONS = 28;
+	public static Integer INSERT_HOST_CERTIFICATES = 28;
 
     public static Integer DEPLOY_EXTERNAL_SECURITY = 35;
     public static Integer DEPLOY_PROTECTED_COLLECTIONS = 40;

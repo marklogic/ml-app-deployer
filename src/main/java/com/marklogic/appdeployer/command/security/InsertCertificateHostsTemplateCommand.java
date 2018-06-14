@@ -21,15 +21,6 @@ import org.springframework.http.ResponseEntity;
  * PEM Files MUST end with .crt AND .key
  * 
  * This command only inserts certificate hosts for templates that are defined in certificate-templates directory
- * 
- * Payload may contain operations as listed at:
- * http://docs.marklogic.com/REST/POST/manage/v2/certificate-templates/[id-or-name]#getCFT
- * <pre>
- * Ex:
- * {
-      "operation": "get-certificates-for-template"
-	 }
-	 </pre>
  */
 public class InsertCertificateHostsTemplateCommand extends AbstractResourceCommand {
 	/**
@@ -48,7 +39,7 @@ public class InsertCertificateHostsTemplateCommand extends AbstractResourceComma
 
 
 	public InsertCertificateHostsTemplateCommand() {
-		setExecuteSortOrder(SortOrderConstants.INSERT_CERTIFICATE_HOSTS_OPERATIONS);
+		setExecuteSortOrder(SortOrderConstants.INSERT_HOST_CERTIFICATES);
 	}
 
 	public InsertCertificateHostsTemplateCommand(String superTemplateName) {
@@ -76,7 +67,7 @@ public class InsertCertificateHostsTemplateCommand extends AbstractResourceComma
 			// implies private key exists
 			insertHostCertificate(context);
 		} else {
-			// PULL template names to search operations directory
+			// PULL template names to search the hostcertificates directory
 			for (File resourceDir : getResourceDirs(context)) {
 				List<String> subTemplateNames = getTemplateNamesFromResourceDir(context, resourceDir);
 
@@ -125,7 +116,7 @@ public class InsertCertificateHostsTemplateCommand extends AbstractResourceComma
      * NOTE: hostnames MUST end in crt and key.   Recommend:  myhost.marklogic.com.pem and myhost.marklogic.com.key
 	  * 
      * @param context
-     * @param superTemplateName Name of the template the sub-operations are to be associated with
+     * @param superTemplateName Name of the template the host certificates are related to
      */
     protected void processHostCertificatesDir(CommandContext context, String superTemplateName) {
 		for (ConfigDir configDir : context.getAppConfig().getConfigDirs()) {
@@ -134,14 +125,13 @@ public class InsertCertificateHostsTemplateCommand extends AbstractResourceComma
 
 			if(hostCertDir.exists()){
 				for (File f : hostCertDir.listFiles()) {
-					logger.info("Found file: " + f.getAbsolutePath());
 					// Files must end in CRT
 					if (f.getName().endsWith("crt")) {
 						String keyFileString = f.getAbsolutePath().replace(".crt", ".key");
 						File pFile = new File(keyFileString);
 
 						if (pFile.exists()) {
-							logger.info("Found matching private key file: " + pFile.getAbsolutePath());
+							logger.info("Found Public and Private key files for : " + f.getAbsolutePath());
 							this.privateCertFile = f;
 							this.publicCertFile = pFile;
 
