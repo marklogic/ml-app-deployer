@@ -22,7 +22,6 @@ public class DeployRolesCommand extends AbstractResourceCommand {
 	private boolean secondPass = false;
 	private ResourceMapper resourceMapper;
 	private Set<String> roleNamesThatDontNeedToBeRedeployed;
-	private Set<String> roleNamesThatWereSkipped;
 
 	public DeployRolesCommand() {
 		setExecuteSortOrder(SortOrderConstants.DEPLOY_ROLES);
@@ -44,7 +43,6 @@ public class DeployRolesCommand extends AbstractResourceCommand {
 			logger.info("Deploying roles minus their default permissions and references to roles");
 		}
 		roleNamesThatDontNeedToBeRedeployed = new HashSet<>();
-		roleNamesThatWereSkipped = new HashSet<>();
 		super.execute(context);
 		if (logger.isInfoEnabled()) {
 			logger.info("Redeploying roles that have default permissions and/or references to roles");
@@ -105,12 +103,6 @@ public class DeployRolesCommand extends AbstractResourceCommand {
 			if (logger.isInfoEnabled()) {
 				logger.info("Even though this file was deployed in the first pass (it must have been dirty), it has no permissions or roles, so it is automatically skipped during the second pass.");
 				logger.info("Not redeploying role " + role.getRoleName() + ", as it does not have any default permissions or references to other roles");
-			}
-			return null;
-		} if (roleNamesThatWereSkipped.contains(role.getRoleName())) {
-			if (logger.isInfoEnabled()) {
-				logger.info("This file was skipped during the first pass, so it is automatically skipped during the second pass.");
-				logger.info("Not redeploying role " + role.getRoleName() + ", as it was skipped the first time through");
 			}
 			return null;
 		}
