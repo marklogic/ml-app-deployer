@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 /**
  * Simple filter implementation that returns true for .json and .xml files.
  */
-public class ResourceFilenameFilter extends LoggingObject implements FilenameFilter {
+public class ResourceFilenameFilter extends LoggingObject implements IncrementalFilenameFilter {
 
     private Set<String> filenamesToIgnore;
     private Pattern excludePattern;
@@ -123,9 +123,11 @@ public class ResourceFilenameFilter extends LoggingObject implements FilenameFil
 		this.includePattern = includePattern;
 	}
 
+	@Override
 	public void addFilenameToIgnoreHash(String filename) {
 		filenamesToIgnoreHashValues.add(filename);
 	}
 
+	@Override
 	public void setIncrementalMode(boolean incrementalMode) { this.incrementalMode = incrementalMode; }
 }

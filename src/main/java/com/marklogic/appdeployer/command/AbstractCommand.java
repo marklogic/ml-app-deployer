@@ -29,7 +29,7 @@ public abstract class AbstractCommand extends LoggingObject implements Command {
     private boolean storeResourceIdsAsCustomTokens = false;
 
     protected PayloadTokenReplacer payloadTokenReplacer = new DefaultPayloadTokenReplacer();
-    private FilenameFilter resourceFilenameFilter = new ResourceFilenameFilter();
+    private IncrementalFilenameFilter resourceFilenameFilter = new ResourceFilenameFilter();
     private PayloadParser payloadParser = new PayloadParser();
 
     /**
@@ -286,7 +286,7 @@ public abstract class AbstractCommand extends LoggingObject implements Command {
         this.storeResourceIdsAsCustomTokens = storeResourceIdsAsCustomTokens;
     }
 
-    public void setResourceFilenameFilter(FilenameFilter resourceFilenameFilter) {
+    public void setResourceFilenameFilter(IncrementalFilenameFilter resourceFilenameFilter) {
         this.resourceFilenameFilter = resourceFilenameFilter;
     }
 
@@ -295,6 +295,6 @@ public abstract class AbstractCommand extends LoggingObject implements Command {
 	}
 
 	protected void setIncrementalMode(Boolean incrementalMode) {
-		((ResourceFilenameFilter) resourceFilenameFilter).setIncrementalMode(incrementalMode);
+		resourceFilenameFilter.setIncrementalMode(incrementalMode);
 	}
 }
