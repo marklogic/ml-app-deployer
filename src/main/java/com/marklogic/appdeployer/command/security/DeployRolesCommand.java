@@ -19,7 +19,6 @@ public class DeployRolesCommand extends AbstractResourceCommand {
 
 	// Used internally
 	private boolean removeRolesAndPermissionsDuringDeployment = false;
-	private boolean incrementalMode;
 	private boolean secondPass = false;
 	private ResourceMapper resourceMapper;
 	private Set<String> roleNamesThatDontNeedToBeRedeployed;
@@ -39,12 +38,10 @@ public class DeployRolesCommand extends AbstractResourceCommand {
 	 */
 	@Override
 	public void execute(CommandContext context) {
-		incrementalMode = context.getAppConfig().getIncrementalDeploy();
 		removeRolesAndPermissionsDuringDeployment = true;
 		secondPass = false;
 		if (logger.isInfoEnabled()) {
 			logger.info("Deploying roles minus their default permissions and references to roles");
-			logger.info("IncrementalMode: " + incrementalMode);
 		}
 		roleNamesThatDontNeedToBeRedeployed = new HashSet<>();
 		roleNamesThatWereSkipped = new HashSet<>();
@@ -133,27 +130,6 @@ public class DeployRolesCommand extends AbstractResourceCommand {
 	@Override
 	protected ResourceManager getResourceManager(CommandContext context) {
 		return new RoleManager(context.getManageClient());
-	}
-
-//	@Override
-	protected void skippingResource(CommandContext context, File f) {
-		if (resourceMapper == null) {
-			API api = new API(context.getManageClient(), context.getAdminManager());
-			resourceMapper = new DefaultResourceMapper(api);
-		}
-
-		String payload = copyFileToString(f, context);
-		Role role = resourceMapper.readResource(payload, Role.class);
-		roleNamesThatWereSkipped.add(role.getRoleName());
-	}
-
-//	@Override
-	protected Boolean incrementalMode() {
-		return (incrementalMode && !secondPass);
-	}
-
-	public void setIncrementalMode(boolean incrementalMode) {
-		this.incrementalMode = incrementalMode;
 	}
 }
 
