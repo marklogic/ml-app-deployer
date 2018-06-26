@@ -1,10 +1,8 @@
 package com.marklogic.appdeployer.command;
 
 import com.marklogic.client.ext.helper.LoggingObject;
-import com.marklogic.mgmt.SaveReceipt;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;

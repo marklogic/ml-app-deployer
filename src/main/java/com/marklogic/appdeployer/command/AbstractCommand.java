@@ -10,12 +10,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.FileCopyUtils;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
