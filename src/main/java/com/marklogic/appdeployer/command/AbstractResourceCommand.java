@@ -30,6 +30,7 @@ public abstract class AbstractResourceCommand extends AbstractUndoableCommand {
 
     @Override
     public void execute(CommandContext context) {
+		setIncrementalMode(context.getAppConfig().getIncrementalDeploy());
         for (File resourceDir : getResourceDirs(context)) {
             processExecuteOnResourceDir(context, resourceDir);
         }

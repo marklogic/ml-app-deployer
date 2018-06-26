@@ -1,8 +1,9 @@
 package com.marklogic.appdeployer.command.security;
 
-import com.marklogic.appdeployer.command.AbstractIncrementalResourceCommand;
+import com.marklogic.appdeployer.command.AbstractResourceCommand;
 import com.marklogic.appdeployer.command.CommandContext;
 import com.marklogic.appdeployer.command.SortOrderConstants;
+import com.marklogic.mgmt.SaveReceipt;
 import com.marklogic.mgmt.api.API;
 import com.marklogic.mgmt.api.security.Role;
 import com.marklogic.mgmt.mapper.DefaultResourceMapper;
@@ -14,7 +15,7 @@ import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 
-public class DeployRolesCommand extends AbstractIncrementalResourceCommand {
+public class DeployRolesCommand extends AbstractResourceCommand {
 
 	// Used internally
 	private boolean removeRolesAndPermissionsDuringDeployment = false;
@@ -56,6 +57,15 @@ public class DeployRolesCommand extends AbstractIncrementalResourceCommand {
 		super.execute(context);
 	}
 
+	@Override
+	protected void afterResourceSaved(ResourceManager mgr, CommandContext context, File resourceFile, SaveReceipt receipt) {
+		if (!secondPass) {
+			ignoreHashForFilename(resourceFile.getAbsolutePath());
+			logger.info("Any file deployed in the first pass, must be a candidate for deployment in the second phase. We need to ignore the hashes for these files during the second phase.");
+		}
+		super.afterResourceSaved(mgr, context, resourceFile, receipt);
+	}
+
 	/**
 	 * If this is the first time roles are being deployed by this command - indicated by the removeRolesAndPermissionsDuringDeployment
 	 * class variable - then each payload is modified so that default permissions and role references are not included,
@@ -81,6 +91,7 @@ public class DeployRolesCommand extends AbstractIncrementalResourceCommand {
 		}
 
 		Role role = resourceMapper.readResource(payload, Role.class);
+		logger.info("adjustPayloadBeforeSavingResource: " + role.getRoleName());
 
 		// Is this the first time the roles are being deployed?
 		if (removeRolesAndPermissionsDuringDeployment) {
@@ -95,17 +106,20 @@ public class DeployRolesCommand extends AbstractIncrementalResourceCommand {
 		// Else it's the second time roles are being deployed, but no need to deploy a role if it doesn't have any default permissions or role references
 		else if (roleNamesThatDontNeedToBeRedeployed.contains(role.getRoleName())) {
 			if (logger.isInfoEnabled()) {
+				logger.info("Even though this file was deployed in the first pass (it must have been dirty), it has no permissions or roles, so it is automatically skipped during the second pass.");
 				logger.info("Not redeploying role " + role.getRoleName() + ", as it does not have any default permissions or references to other roles");
 			}
 			return null;
 		} if (roleNamesThatWereSkipped.contains(role.getRoleName())) {
 			if (logger.isInfoEnabled()) {
+				logger.info("This file was skipped during the first pass, so it is automatically skipped during the second pass.");
 				logger.info("Not redeploying role " + role.getRoleName() + ", as it was skipped the first time through");
 			}
 			return null;
 		}
 		// Else log a message to indicate that the role is being redeployed
 		else if (logger.isInfoEnabled()) {
+			logger.info("Since this file was deployed in the first pass (it must have been dirty), and it has permissions or roles, then we should ignore the incremental hash for this file during the second pass to ensure the redeploy.");
 			logger.info("Redeploying role " + role.getRoleName() + " with default permissions and references to other roles included");
 		}
 
@@ -121,7 +135,7 @@ public class DeployRolesCommand extends AbstractIncrementalResourceCommand {
 		return new RoleManager(context.getManageClient());
 	}
 
-	@Override
+//	@Override
 	protected void skippingResource(CommandContext context, File f) {
 		if (resourceMapper == null) {
 			API api = new API(context.getManageClient(), context.getAdminManager());
@@ -133,7 +147,7 @@ public class DeployRolesCommand extends AbstractIncrementalResourceCommand {
 		roleNamesThatWereSkipped.add(role.getRoleName());
 	}
 
-	@Override
+//	@Override
 	protected Boolean incrementalMode() {
 		return (incrementalMode && !secondPass);
 	}

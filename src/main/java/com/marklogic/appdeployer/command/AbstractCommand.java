@@ -289,4 +289,12 @@ public abstract class AbstractCommand extends LoggingObject implements Command {
     public void setResourceFilenameFilter(FilenameFilter resourceFilenameFilter) {
         this.resourceFilenameFilter = resourceFilenameFilter;
     }
+
+    protected void ignoreHashForFilename(String filename) {
+		((ResourceFilenameFilter) resourceFilenameFilter).addFilenameToIgnoreHash(filename);
+	}
+
+	protected void setIncrementalMode(Boolean incrementalMode) {
+		((ResourceFilenameFilter) resourceFilenameFilter).setIncrementalMode(incrementalMode);
+	}
 }

@@ -1,6 +1,7 @@
 package com.marklogic.appdeployer.command;
 
 import com.marklogic.client.ext.helper.LoggingObject;
+import com.marklogic.mgmt.SaveReceipt;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -16,9 +17,17 @@ public class ResourceFilenameFilter extends LoggingObject implements FilenameFil
     private Set<String> filenamesToIgnore;
     private Pattern excludePattern;
     private Pattern includePattern;
+    private ResourceManager resourceManager = new ResourceManagerImpl();
+	private Set<String> filenamesToIgnoreHashValues = new HashSet<String>();
+	private boolean incrementalMode = false;
 
-    public ResourceFilenameFilter() {
+
+	public ResourceFilenameFilter() {
     }
+
+	public ResourceFilenameFilter(ResourceManager resourceManager) {
+    	this.resourceManager = resourceManager;
+	}
 
     public ResourceFilenameFilter(String... filenamesToIgnore) {
         this.filenamesToIgnore = new HashSet<>();
@@ -33,6 +42,7 @@ public class ResourceFilenameFilter extends LoggingObject implements FilenameFil
 
     @Override
     public boolean accept(File dir, String filename) {
+    	logger.info("ResourceFilenameFilter.accept: " + filename);
     	if (excludePattern != null && includePattern != null) {
     		throw new IllegalStateException("Both excludePattern and includePattern cannot be specified");
 	    }
@@ -62,7 +72,31 @@ public class ResourceFilenameFilter extends LoggingObject implements FilenameFil
             return false;
         }
 
-        return filename.endsWith(".json") || filename.endsWith(".xml");
+        if (filename.endsWith(".json") || filename.endsWith(".xml")) {
+			File f = new File(dir.getAbsolutePath()+File.separatorChar+filename);
+			if (filenamesToIgnoreHashValues.contains(f.getAbsolutePath())) {
+				logger.info("Ignoring hash for file. Is this a second pass?");
+				return true;
+			}
+			if (incrementalMode) {
+				if (resourceManager.hasFileBeenModifiedSinceLastDeployed(f)) {
+					if (logger.isInfoEnabled()) {
+						logger.info("File has been modified or incremental mode is turned off.");
+					}
+					resourceManager.saveLastDeployedHash(f);
+					return true;
+				} else {
+					if (logger.isInfoEnabled()) {
+						logger.info("File has NOT been modified.");
+					}
+					return false;
+				}
+			} else {
+				return true;
+			}
+		} else {
+			return false;
+		}
     }
 
     public void setFilenamesToIgnore(Set<String> ignoreFilenames) {
@@ -88,4 +122,10 @@ public class ResourceFilenameFilter extends LoggingObject implements FilenameFil
 	public void setIncludePattern(Pattern includePattern) {
 		this.includePattern = includePattern;
 	}
+
+	public void addFilenameToIgnoreHash(String filename) {
+		filenamesToIgnoreHashValues.add(filename);
+	}
+
+	public void setIncrementalMode(boolean incrementalMode) { this.incrementalMode = incrementalMode; }
 }

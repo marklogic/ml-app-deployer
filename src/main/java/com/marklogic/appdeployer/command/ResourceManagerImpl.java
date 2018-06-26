@@ -1,15 +1,22 @@
-package com.marklogic.appdeployer.util;
-
-import java.io.*;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Properties;
+package com.marklogic.appdeployer.command;
 
 import com.marklogic.client.ext.helper.LoggingObject;
 
-public class ResourceHashManager extends LoggingObject {
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Date;
+import java.util.Properties;
 
-    public static final String DEFAULT_FILE_PATH = "build/ml-gradle/resourceHash.properties";
+/**
+ * Defines operations for managing whether a module needs to be installed or not.
+ */
+public class ResourceManagerImpl extends LoggingObject implements ResourceManager {
+
+	public static final String DEFAULT_FILE_PATH = "build/ml-gradle/resource-timestamps.properties";
 
 	private static MessageDigest md5Digest;
 	static {
@@ -20,43 +27,46 @@ public class ResourceHashManager extends LoggingObject {
 		}
 	}
 
-    private Properties props;
-    private String hashFilePath;
+	private Properties props;
+	private String hashFilePath;
 
-    public ResourceHashManager() {
-        this(DEFAULT_FILE_PATH);
-    }
+	public ResourceManagerImpl() {
+		this(DEFAULT_FILE_PATH);
+	}
 
-    public ResourceHashManager(String propertiesFilePath) {
-        props = new Properties();
-        this.hashFilePath = propertiesFilePath;
+	public ResourceManagerImpl(String propertiesFilePath) {
+		props = new Properties();
+		this.hashFilePath = propertiesFilePath;
 		initialize();
-    }
+	}
 
-    public void initialize() {
-    	File propertiesFile = new File(hashFilePath);
-        propertiesFile.getParentFile().mkdirs();
-        if (propertiesFile.exists()) {
-            FileInputStream fis = null;
-            try {
-                fis = new FileInputStream(propertiesFile);
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Loading properties from: " + propertiesFile.getAbsolutePath());
-                }
-                props.load(fis);
-            } catch (Exception e) {
-                logger.warn("Unable to load properties, cause: " + e.getMessage());
-            } finally {
-                try {
-                    fis.close();
-                } catch (Exception e) {
-                    logger.warn(e.getMessage());
-                }
-            }
-        }
-    }
+	@Override
+	public void initialize() {
+		File propertiesFile = new File(hashFilePath);
+		logger.info("Loading properties from: " + propertiesFile.getAbsolutePath());
+		propertiesFile.getParentFile().mkdirs();
+		if (propertiesFile.exists()) {
+			FileInputStream fis = null;
+			try {
+				fis = new FileInputStream(propertiesFile);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Loading properties from: " + propertiesFile.getAbsolutePath());
+				}
+				props.load(fis);
+			} catch (Exception e) {
+				logger.warn("Unable to load properties, cause: " + e.getMessage());
+			} finally {
+				try {
+					fis.close();
+				} catch (Exception e) {
+					logger.warn(e.getMessage());
+				}
+			}
+		}
+	}
 
-    public boolean hasFileBeenModifiedSinceLastDeployed(File file) {
+	@Override
+	public boolean hasFileBeenModifiedSinceLastDeployed(File file) {
 		String lastDeployedChecksum = null;
 		try {
 			lastDeployedChecksum = computeFileChecksum(md5Digest, file);
@@ -74,25 +84,15 @@ public class ResourceHashManager extends LoggingObject {
 			if (lastChecksum != null) {
 				return !lastChecksum.equals(lastDeployedChecksum);
 			} else {
-				return false;
+				return true;
 			}
 		} else {
+			logger.info("Hmm, really shouldn't get here. lastDeployedChecksum should never be null here. Should have thrown an exception if there was a problem. Probably need to refactor this out.");
 			return false;
 		}
-    }
+	}
 
-    /**
-     * Lower-casing avoids some annoying issues on Windows where sometimes you get "C:" at the start, and other times
-     * you get "c:". This of course will be a problem if you for some reason have modules with the same names but
-     * differing in some cases, but I'm not sure why anyone would do that.
-     *
-     * @param file
-     * @return
-     */
-    protected String buildKey(File file) {
-        return file.getAbsolutePath().toLowerCase();
-    }
-
+	@Override
 	public void saveLastDeployedHash(File file) {
 		String key = buildKey(file);
 		String fileChecksum = null;
@@ -146,5 +146,17 @@ public class ResourceHashManager extends LoggingObject {
 
 		//return complete hash
 		return sb.toString();
+	}
+
+	/**
+	 * Lower-casing avoids some annoying issues on Windows where sometimes you get "C:" at the start, and other times
+	 * you get "c:". This of course will be a problem if you for some reason have modules with the same names but
+	 * differing in some cases, but I'm not sure why anyone would do that.
+	 *
+	 * @param file
+	 * @return
+	 */
+	protected String buildKey(File file) {
+		return file.getAbsolutePath().toLowerCase();
 	}
 }
