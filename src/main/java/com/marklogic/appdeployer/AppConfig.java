@@ -1213,5 +1213,4 @@ public class AppConfig {
 	public void setForestNamingStrategies(Map<String, ForestNamingStrategy> forestNamingStrategies) {
 		this.forestNamingStrategies = forestNamingStrategies;
 	}
-
 }

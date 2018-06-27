@@ -16,7 +16,7 @@ public class ResourceFilenameFilter extends LoggingObject implements Incremental
     private Pattern excludePattern;
     private Pattern includePattern;
     private ResourceManager resourceManager = new ResourceManagerImpl();
-	private Set<String> filenamesToIgnoreHashValues = new HashSet<String>();
+	private Set<String> filenamesToIgnoreHashValues = new HashSet<>();
 	private boolean incrementalMode = false;
 
 
@@ -40,7 +40,6 @@ public class ResourceFilenameFilter extends LoggingObject implements Incremental
 
     @Override
     public boolean accept(File dir, String filename) {
-    	logger.info("ResourceFilenameFilter.accept: " + filename);
     	if (excludePattern != null && includePattern != null) {
     		throw new IllegalStateException("Both excludePattern and includePattern cannot be specified");
 	    }
@@ -73,19 +72,21 @@ public class ResourceFilenameFilter extends LoggingObject implements Incremental
         if (filename.endsWith(".json") || filename.endsWith(".xml")) {
 			File f = new File(dir.getAbsolutePath()+File.separatorChar+filename);
 			if (filenamesToIgnoreHashValues.contains(f.getAbsolutePath())) {
-				logger.info("Ignoring hash for file. Is this a second pass?");
+				if (logger.isInfoEnabled()) {
+					logger.info("Ignoring hash for file: " + f.getAbsolutePath());
+				}
 				return true;
 			}
 			if (incrementalMode) {
 				if (resourceManager.hasFileBeenModifiedSinceLastDeployed(f)) {
 					if (logger.isInfoEnabled()) {
-						logger.info("File has been modified or incremental mode is turned off.");
+						logger.info("File has been modified: " + f.getAbsolutePath());
 					}
 					resourceManager.saveLastDeployedHash(f);
 					return true;
 				} else {
 					if (logger.isInfoEnabled()) {
-						logger.info("File has NOT been modified.");
+						logger.info("File has NOT been modified: " + f.getAbsolutePath());
 					}
 					return false;
 				}
@@ -124,6 +125,11 @@ public class ResourceFilenameFilter extends LoggingObject implements Incremental
 	@Override
 	public void addFilenameToIgnoreHash(String filename) {
 		filenamesToIgnoreHashValues.add(filename);
+	}
+
+	@Override
+	public void clearFilenamesToIgnoreHash() {
+		filenamesToIgnoreHashValues = new HashSet<String>();
 	}
 
 	@Override

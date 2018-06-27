@@ -52,11 +52,14 @@ public class DeployRolesCommand extends AbstractResourceCommand {
 		super.execute(context);
 	}
 
+	/**
+	 * Any file deployed in the first pass, must be a candidate for deployment in the second phase.
+	 * We need to ignore the hashes for these files during the second phase.
+	 */
 	@Override
 	protected void afterResourceSaved(ResourceManager mgr, CommandContext context, File resourceFile, SaveReceipt receipt) {
 		if (!secondPass) {
 			ignoreHashForFilename(resourceFile.getAbsolutePath());
-			logger.info("Any file deployed in the first pass, must be a candidate for deployment in the second phase. We need to ignore the hashes for these files during the second phase.");
 		}
 		super.afterResourceSaved(mgr, context, resourceFile, receipt);
 	}
@@ -86,7 +89,6 @@ public class DeployRolesCommand extends AbstractResourceCommand {
 		}
 
 		Role role = resourceMapper.readResource(payload, Role.class);
-		logger.info("adjustPayloadBeforeSavingResource: " + role.getRoleName());
 
 		// Is this the first time the roles are being deployed?
 		if (removeRolesAndPermissionsDuringDeployment) {
@@ -101,14 +103,12 @@ public class DeployRolesCommand extends AbstractResourceCommand {
 		// Else it's the second time roles are being deployed, but no need to deploy a role if it doesn't have any default permissions or role references
 		else if (roleNamesThatDontNeedToBeRedeployed.contains(role.getRoleName())) {
 			if (logger.isInfoEnabled()) {
-				logger.info("Even though this file was deployed in the first pass (it must have been dirty), it has no permissions or roles, so it is automatically skipped during the second pass.");
 				logger.info("Not redeploying role " + role.getRoleName() + ", as it does not have any default permissions or references to other roles");
 			}
 			return null;
 		}
 		// Else log a message to indicate that the role is being redeployed
 		else if (logger.isInfoEnabled()) {
-			logger.info("Since this file was deployed in the first pass (it must have been dirty), and it has permissions or roles, then we should ignore the incremental hash for this file during the second pass to ensure the redeploy.");
 			logger.info("Redeploying role " + role.getRoleName() + " with default permissions and references to other roles included");
 		}
 

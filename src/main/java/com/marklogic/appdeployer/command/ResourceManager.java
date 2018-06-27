@@ -1,7 +1,6 @@
 package com.marklogic.appdeployer.command;
 
 import java.io.File;
-import java.util.Date;
 
 /**
  * Defines operations for managing whether a module needs to be installed or not.
