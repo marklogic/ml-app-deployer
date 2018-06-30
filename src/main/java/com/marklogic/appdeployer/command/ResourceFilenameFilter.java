@@ -15,7 +15,7 @@ public class ResourceFilenameFilter extends LoggingObject implements Incremental
     private Set<String> filenamesToIgnore;
     private Pattern excludePattern;
     private Pattern includePattern;
-    private ResourceManager resourceManager = new ResourceManagerImpl();
+    private ResourceFileManager resourceFileManager = new ResourceFileManagerImpl();
 	private Set<String> filenamesToIgnoreHashValues = new HashSet<>();
 	private boolean incrementalMode = false;
 
@@ -23,8 +23,8 @@ public class ResourceFilenameFilter extends LoggingObject implements Incremental
 	public ResourceFilenameFilter() {
     }
 
-	public ResourceFilenameFilter(ResourceManager resourceManager) {
-    	this.resourceManager = resourceManager;
+	public ResourceFilenameFilter(ResourceFileManager resourceFileManager) {
+    	this.resourceFileManager = resourceFileManager;
 	}
 
     public ResourceFilenameFilter(String... filenamesToIgnore) {
@@ -78,11 +78,11 @@ public class ResourceFilenameFilter extends LoggingObject implements Incremental
 				return true;
 			}
 			if (incrementalMode) {
-				if (resourceManager.hasFileBeenModifiedSinceLastDeployed(f)) {
+				if (resourceFileManager.hasFileBeenModifiedSinceLastDeployed(f)) {
 					if (logger.isInfoEnabled()) {
 						logger.info("File has been modified: " + f.getAbsolutePath());
 					}
-					resourceManager.saveLastDeployedHash(f);
+					resourceFileManager.saveLastDeployedHash(f);
 					return true;
 				} else {
 					if (logger.isInfoEnabled()) {

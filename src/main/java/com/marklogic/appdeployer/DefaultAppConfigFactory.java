@@ -622,7 +622,7 @@ public class DefaultAppConfigFactory extends PropertySourceFactory implements Ap
 		});
 
 		propertyConsumerMap.put("mlIncremental", (config, prop) -> {
-			logger.info("Deploy incrementally when possible: " + prop);
+			logger.info("Supported resources will only be deployed if their resource files are now or have been modified since the last deployment: " + prop);
 			config.setIncrementalDeploy(Boolean.parseBoolean(prop));
 		});
 	}

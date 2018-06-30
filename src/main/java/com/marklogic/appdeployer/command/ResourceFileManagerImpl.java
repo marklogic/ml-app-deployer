@@ -13,7 +13,7 @@ import java.util.Properties;
 /**
  * Defines operations for managing whether a module needs to be installed or not.
  */
-public class ResourceManagerImpl extends LoggingObject implements ResourceManager {
+public class ResourceFileManagerImpl extends LoggingObject implements ResourceFileManager {
 
 	public static final String DEFAULT_FILE_PATH = "build/ml-gradle/resource-timestamps.properties";
 
@@ -29,11 +29,11 @@ public class ResourceManagerImpl extends LoggingObject implements ResourceManage
 	private Properties props;
 	private String hashFilePath;
 
-	public ResourceManagerImpl() {
+	public ResourceFileManagerImpl() {
 		this(DEFAULT_FILE_PATH);
 	}
 
-	public ResourceManagerImpl(String propertiesFilePath) {
+	public ResourceFileManagerImpl(String propertiesFilePath) {
 		props = new Properties();
 		this.hashFilePath = propertiesFilePath;
 		initialize();
