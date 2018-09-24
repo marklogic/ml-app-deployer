@@ -5,10 +5,12 @@ import com.marklogic.appdeployer.command.AbstractCommand;
 import com.marklogic.appdeployer.command.CommandContext;
 import com.marklogic.appdeployer.command.SortOrderConstants;
 import com.marklogic.mgmt.api.forest.Forest;
+import com.marklogic.mgmt.cma.ConfigurationManager;
 import com.marklogic.mgmt.resource.databases.DatabaseManager;
 import com.marklogic.mgmt.resource.forests.ForestManager;
 import com.marklogic.mgmt.resource.hosts.DefaultHostNameProvider;
 import com.marklogic.mgmt.resource.hosts.HostManager;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 
 import java.io.File;
@@ -29,6 +31,12 @@ import java.util.Set;
  */
 public class DeployForestsCommand extends AbstractCommand {
 
+	/**
+	 * This was added back in 3.8.2 to preserve backwards compatibility, as it was removed in 3.7.0.
+	 */
+	public static final String DEFAULT_FOREST_PAYLOAD = "{\"forest-name\": \"%%FOREST_NAME%%\", \"host\": \"%%FOREST_HOST%%\", "
+		+ "\"database\": \"%%FOREST_DATABASE%%\"}";
+
 	private int forestsPerHost = 1;
 	private String databaseName;
 	private String forestFilename;
@@ -36,8 +44,22 @@ public class DeployForestsCommand extends AbstractCommand {
 	private boolean createForestsOnEachHost = true;
 	private HostCalculator hostCalculator;
 
-	public DeployForestsCommand(String databaseName) {
+	/**
+	 * This was added back in 3.8.2 to preserve backwards compatibility, as it was removed in 3.7.0. If you use this
+	 * constructor, be sure to call setDatabaseName.
+	 */
+	public DeployForestsCommand() {
 		setExecuteSortOrder(SortOrderConstants.DEPLOY_FORESTS);
+	}
+
+	/**
+	 * This is the preferred constructor to use for this class, as it requires a database name, which is required for
+	 * this command to execute correctly.
+	 *
+	 * @param databaseName
+	 */
+	public DeployForestsCommand(String databaseName) {
+		this();
 		this.databaseName = databaseName;
 	}
 
@@ -51,6 +73,39 @@ public class DeployForestsCommand extends AbstractCommand {
 	public void execute(CommandContext context) {
 		// Replicas are currently handled by ConfigureForestReplicasCommand
 		List<Forest> forests = buildForests(context, false);
+
+		if (shouldOptimizeWithCma(context) && !forests.isEmpty()) {
+			createForestsViaCma(context, forests);
+		} else {
+			if (logger.isInfoEnabled()) {
+				logger.info("Configuration Management API is not available at " + ConfigurationManager.PATH + ", so forests will be created one at a time via the forests endpoint");
+			}
+			createForestsViaForestEndpoint(context, forests);
+		}
+	}
+
+	protected void createForestsViaCma(CommandContext context, List<Forest> forests) {
+		StringBuilder sb = new StringBuilder("{\"config\":[{\"forest\":[");
+		for (int i = 0; i < forests.size(); i++) {
+			if (i > 0) {
+				sb.append(",");
+			}
+			sb.append(forests.get(i).getJson());
+		}
+		sb.append("]}]}");
+
+		// For version 3.8.0, logging the configuration package at the info level for better visibility and
+		// easier debugging of this new feature
+		if (logger.isInfoEnabled()) {
+			logger.info("Submitting configuration with forests: " + sb);
+		}
+		context.getManageClient().postJson("/manage/v3", sb.toString());
+		if (logger.isInfoEnabled()) {
+			logger.info("Successfully submitted configuration with forests");
+		}
+	}
+
+	protected void createForestsViaForestEndpoint(CommandContext context, List<Forest> forests) {
 		ForestManager forestManager = new ForestManager(context.getManageClient());
 		for (Forest f : forests) {
 			forestManager.save(f.getJson());
@@ -181,5 +236,14 @@ public class DeployForestsCommand extends AbstractCommand {
 
 	public void setHostCalculator(HostCalculator hostCalculator) {
 		this.hostCalculator = hostCalculator;
+	}
+
+	/**
+	 * This was added back in 3.8.2 to preserve backwards compatibility, as it was removed in 3.7.0.
+	 *
+	 * @param databaseName
+	 */
+	public void setDatabaseName(String databaseName) {
+		this.databaseName = databaseName;
 	}
 }

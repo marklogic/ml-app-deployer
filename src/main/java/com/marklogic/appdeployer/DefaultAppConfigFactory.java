@@ -40,6 +40,11 @@ public class DefaultAppConfigFactory extends PropertySourceFactory implements Ap
 			config.setCatchUndeployExceptions(Boolean.parseBoolean(prop));
 		});
 
+		propertyConsumerMap.put("mlOptimizeWithCma", (config, prop) -> {
+			logger.info("Optimize with the Configuration Management API (CMA): " + prop);
+			config.setOptimizeWithCma(Boolean.parseBoolean(prop));
+		});
+
 		/**
 		 * The application name is used as a prefix for default names for a variety of resources, such as REST API servers
 		 * and databases.
@@ -624,6 +629,11 @@ public class DefaultAppConfigFactory extends PropertySourceFactory implements Ap
 		propertyConsumerMap.put("mlIncremental", (config, prop) -> {
 			logger.info("Supported resources will only be deployed if their resource files are now or have been modified since the last deployment: " + prop);
 			config.setIncrementalDeploy(Boolean.parseBoolean(prop));
+    });
+    
+		propertyConsumerMap.put("mlUpdateMimetypeWhenPropertiesAreEqual", (config, prop) -> {
+			logger.info("Update mimetype when properties are equal (defaults to false to avoid unnecessary ML restarts): " + prop);
+			config.setUpdateMimetypeWhenPropertiesAreEqual(Boolean.parseBoolean(prop));
 		});
 	}
 

@@ -107,6 +107,7 @@ public class DefaultAppConfigFactoryTest extends Assert {
 
         p.setProperty("mlCatchDeployExceptions", "true");
 	    p.setProperty("mlCatchUndeployExceptions", "true");
+	    p.setProperty("mlOptimizeWithCma", "true");
 
 	    p.setProperty("mlHost", "prophost");
         p.setProperty("mlAppName", "propname");
@@ -196,11 +197,14 @@ public class DefaultAppConfigFactoryTest extends Assert {
 
 	    p.setProperty("mlHostGroups", "host1,Default,host2,other-group");
 
+	    p.setProperty("mlUpdateMimetypeWhenPropertiesAreEqual", "true");
+
 	    sut = new DefaultAppConfigFactory(new SimplePropertySource(p));
         AppConfig config = sut.newAppConfig();
 
         assertTrue(config.isCatchDeployExceptions());
         assertTrue(config.isCatchUndeployExceptions());
+        assertTrue(config.isOptimizeWithCma());
 
         assertEquals("prophost", config.getHost());
         assertEquals("propname", config.getName());
@@ -342,6 +346,8 @@ public class DefaultAppConfigFactoryTest extends Assert {
 	    map = config.getHostGroups();
 	    assertEquals("Default", map.get("host1"));
 	    assertEquals("other-group", map.get("host2"));
+
+	    assertTrue(config.isUpdateMimetypeWhenPropertiesAreEqual());
     }
 
 	/**
