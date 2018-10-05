@@ -62,9 +62,6 @@ public class AbstractManager extends LoggingObject {
         boolean requiresSecurityUser = useSecurityUser(payload);
         try {
 	        if (payloadParser.isJsonPayload(payload)) {
-	        	// remove resourceID from payload for DHS.
-				// should be safe for all payloads though.
-				payload = payloadParser.excludeProperties(payload, getIdFieldName());
 		        return requiresSecurityUser ? client.putJsonAsSecurityUser(path, payload) : client.putJson(path, payload);
 	        }
 	        return requiresSecurityUser ? client.putXmlAsSecurityUser(path, payload) : client.putXml(path, payload);
