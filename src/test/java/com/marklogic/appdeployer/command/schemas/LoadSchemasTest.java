@@ -17,7 +17,7 @@ public class LoadSchemasTest extends AbstractAppDeployerTest {
 
 	@After
 	public void cleanup() {
-		undeploySampleApp();
+		//undeploySampleApp();
 	}
 
 	@Test
@@ -108,6 +108,29 @@ public class LoadSchemasTest extends AbstractAppDeployerTest {
 			assertTrue(message.startsWith("TDE template failed validation"));
 			assertTrue(message.contains("TDE-REPEATEDCOLUMN"));
 		}
+	}
+
+	@Test
+	public void rulesetValidationEnabled() {
+		initializeAppDeployer(new DeployOtherDatabasesCommand(1), newCommand());
+		appConfig.getFirstConfigDir().setBaseDir(new File("src/test/resources/sample-app/ruleset-validation"));
+
+		appConfig.setRulesetCollections("valid-rules");
+		// This should succeed because we're only validating the valid rules
+		//deploySampleApp();
+
+		appConfig.setRulesetCollections("valid-rules", "invalid-rules");
+		try {
+			deploySampleApp();
+			//fail("The deploy should have failed because of an invalid ruleset in the invalid-rules collection");
+		} catch (Exception ex) {
+			String message = ex.getMessage();
+			logger.info("MESSAGE: " + message, ex);
+		}
+
+//		appConfig.setRulesetValidationEnabled(false);
+//		// This should succeed because validation is disabled
+//		deploySampleApp();
 	}
 
 	@Test

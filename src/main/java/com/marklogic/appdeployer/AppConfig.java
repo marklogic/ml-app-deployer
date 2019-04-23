@@ -134,6 +134,8 @@ public class AppConfig {
 
     private List<String> schemaPaths;
     private boolean tdeValidationEnabled = true;
+    private boolean rulesetValidationEnabled = true;
+    private String[] rulesetCollections;
 
     private List<ConfigDir> configDirs;
 
@@ -1375,5 +1377,21 @@ public class AppConfig {
 
 	public void setModuleTimestampsUseHost(boolean moduleTimestampsUseHost) {
 		this.moduleTimestampsUseHost = moduleTimestampsUseHost;
+	}
+
+	public boolean isRulesetValidationEnabled() {
+		return rulesetValidationEnabled;
+	}
+
+	public void setRulesetValidationEnabled(boolean rulesetValidationEnabled) {
+		this.rulesetValidationEnabled = rulesetValidationEnabled;
+	}
+
+	public String[] getRulesetCollections() {
+		return rulesetCollections;
+	}
+
+	public void setRulesetCollections(String... rulesetCollections) {
+		this.rulesetCollections = rulesetCollections;
 	}
 }

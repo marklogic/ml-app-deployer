@@ -7,15 +7,18 @@ import com.marklogic.appdeployer.command.CommandContext;
 import com.marklogic.appdeployer.command.SortOrderConstants;
 import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.FailedRequestException;
+import com.marklogic.client.eval.EvalResultIterator;
 import com.marklogic.client.ext.schemasloader.SchemasLoader;
 import com.marklogic.client.ext.schemasloader.impl.DefaultSchemasLoader;
 import com.marklogic.mgmt.api.API;
 import com.marklogic.mgmt.api.database.Database;
 import com.marklogic.mgmt.mapper.DefaultResourceMapper;
 import com.marklogic.mgmt.mapper.ResourceMapper;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.util.ArrayList;
 import java.util.List;
 
 public class LoadSchemasCommand extends AbstractCommand {
@@ -60,13 +63,59 @@ public class LoadSchemasCommand extends AbstractCommand {
 		});
 	}
 
+	/**
+	 * As of 3.14.0, will now validate rulesets if configured to do so.
+	 *
+	 * @param schemasPath
+	 * @param schemasDatabaseName
+	 * @param context
+	 */
 	protected void loadSchemas(String schemasPath, String schemasDatabaseName, CommandContext context) {
 		logger.info(format("Loading schemas into database %s from: %s", schemasDatabaseName, schemasPath));
-		DatabaseClient client = buildDatabaseClient(schemasDatabaseName, context);
+		DatabaseClient schemasClient = buildDatabaseClient(schemasDatabaseName, context);
 		try {
-			SchemasLoader schemasLoader = buildSchemasLoader(context, client, schemasDatabaseName);
+			SchemasLoader schemasLoader = buildSchemasLoader(context, schemasClient, schemasDatabaseName);
 			schemasLoader.loadSchemas(schemasPath);
 			logger.info("Finished loading schemas from: " + schemasPath);
+
+			if (context.getAppConfig().isRulesetValidationEnabled()) {
+				String[] collections = context.getAppConfig().getRulesetCollections();
+
+				// Determine which of these collections exist in the given schemas database
+				List<String> schemaCollections = new ArrayList<>();
+				try {
+					EvalResultIterator iter = schemasClient.newServerEval().javascript("cts.collections()").eval();
+					while (iter.hasNext()) {
+						schemaCollections.add(iter.next().getString());
+					}
+				} catch (Exception ex) {
+					logger.warn("Unable to get collections names from schema database, cause: " + ex.getMessage());
+				}
+
+				List<String> collectionsToValidate = new ArrayList<>();
+				for (String collection : collections) {
+					if (schemaCollections.contains(collection)) {
+						collectionsToValidate.add(collection);
+					}
+				}
+
+				if (collectionsToValidate.isEmpty()) {
+					logger.info("No ruleset collections to validate in schema database: " + schemasDatabaseName);
+				} else {
+					String evalScript = "var collections; require('/MarkLogic/redaction.xqy').ruleValidate(collections.split(','))";
+					final String contentDatabase = findContentDatabaseAssociatedWithSchemasDatabase(context, schemasDatabaseName);
+					DatabaseClient contentClient = context.getAppConfig().newAppServicesDatabaseClient(contentDatabase);
+//					Object response = contentClient.newServerEval()
+//						.javascript(evalScript)
+//						.addVariable("collections", String.join(",", collectionsToValidate))
+//						.eval();
+					Object response = contentClient.newServerEval()
+						.javascript("require('/MarkLogic/redaction.xqy').ruleValidate(['valid-rules', 'invalid-rules'])")
+						.eval();
+					logger.info("RESPONSE: " + response);
+				}
+			}
+
 		} catch (FailedRequestException fre) {
 			if (fre.getMessage().contains("NOSUCHDB")) {
 				logger.warn("Unable to load schemas because no schemas database exists; cause: " + fre.getMessage());
@@ -74,7 +123,7 @@ public class LoadSchemasCommand extends AbstractCommand {
 				throw fre;
 			}
 		} finally {
-			client.release();
+			schemasClient.release();
 		}
 	}
 
