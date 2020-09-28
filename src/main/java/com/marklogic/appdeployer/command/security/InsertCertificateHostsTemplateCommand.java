@@ -76,12 +76,15 @@ public class InsertCertificateHostsTemplateCommand extends AbstractCommand {
 	/**
 	 * @param context
 	 * @param templateName The name of the certificate template that the host certificate will be inserted into
+	 * 	Assumes filename is hostname + .crt: ex: host1.marklogic.com.crt
 	 * @param publicCertFile
 	 * @param privateKeyFile
 	 */
 	protected void insertHostCertificate(CommandContext context, String templateName, File publicCertFile, File privateKeyFile) {
 		CertificateTemplateManager mgr = new CertificateTemplateManager(context.getManageClient());
-		if (!mgr.certificateExists(templateName)) {
+		int spot = publicCertFile.getName().toLowerCase().indexOf(".crt");
+		String certHostName = publicCertFile.getName().substring(0, spot);
+		if (!mgr.certificateExists(templateName, certHostName)) {
 			logger.info(format("Inserting host certificate for certificate template '%s'", templateName));
 			String pubCertString = copyFileToString(publicCertFile);
 			String privateKeyString = copyFileToString(privateKeyFile);
