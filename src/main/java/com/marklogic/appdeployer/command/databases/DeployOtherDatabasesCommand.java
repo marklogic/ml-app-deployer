@@ -401,8 +401,6 @@ public class DeployOtherDatabasesCommand extends AbstractUndoableCommand {
 	 * @param databasePlans
 	 */
 	protected void deployDatabasesAndForestsViaCma(CommandContext context, List<DatabasePlan> databasePlans) {
-		addForestMapToCommandContext(context, databasePlans);
-
 		Configuration dbConfig = new Configuration();
 		// Forests must be included in a separate configuration object
 		Configuration forestConfig = new Configuration();
@@ -424,28 +422,6 @@ public class DeployOtherDatabasesCommand extends AbstractUndoableCommand {
 		databasePlans.forEach(plan -> {
 			plan.getDeployDatabaseCommand().deploySubDatabases(plan.getDatabaseName(), context);
 		});
-	}
-
-	/**
-	 * Added to greatly speed up performance when getting details about all the existing primary forests for each
-	 * database referenced by a plan. In the event that anything fails, the map won't be added to the command context
-	 * and any code expecting to use the map will just have to fall back to use /manage/v2.
-	 *
-	 * @param context
-	 * @param databasePlans
-	 */
-	private void addForestMapToCommandContext(CommandContext context, List<DatabasePlan> databasePlans) {
-		try {
-			Set<String> dbNames = databasePlans.stream().map(plan -> plan.getDatabaseName()).collect(Collectors.toSet());
-			logger.info("Retrieving all forest details via CMA");
-			long start = System.currentTimeMillis();
-			Map<String, List<Forest>> forestMap = new ForestManager(context.getManageClient()).getPrimaryForestsForDatabases(dbNames.toArray(new String[]{}));
-			logger.info("Finished retrieving all forests details via CMA; duration: " + (System.currentTimeMillis() - start));
-			context.getContextMap().put("ml-app-deployer-forestMap", forestMap);
-		} catch (Exception ex) {
-			logger.warn("Unable to retrieve all forest details, cause: " + ex.getMessage() + "; will fall back to " +
-				"using /manage/v2 when needed for getting details for a forest.");
-		}
 	}
 
 	/**
