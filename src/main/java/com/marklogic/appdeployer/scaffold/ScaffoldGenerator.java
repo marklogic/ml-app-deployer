@@ -38,6 +38,17 @@ public class ScaffoldGenerator extends LoggingObject {
 	protected ObjectMapper objectMapper;
 	private PrettyPrinter prettyPrinter = new DefaultPrettyPrinter();
 
+	public void generateScaffold(ScaffoldInputs inputs) {
+		// TODO
+	}
+
+	/**
+	 *
+	 * @param path
+	 * @param config
+	 * @deprecated since 4.6.0; use the method using {@code ScaffoldInputs} instead.
+	 */
+	@Deprecated
 	public void generateScaffold(String path, AppConfig config) {
 		if (objectMapper == null) {
 			objectMapper = ObjectMapperFactory.getObjectMapper();
@@ -257,5 +268,39 @@ public class ScaffoldGenerator extends LoggingObject {
 
 	public void setPrettyPrinter(PrettyPrinter prettyPrinter) {
 		this.prettyPrinter = prettyPrinter;
+	}
+
+	public static class ScaffoldInputs {
+		private String appName;
+		private boolean withSchemasDatabase = true;
+		private boolean withRestServer = true;
+		private boolean withUsersAndRoles;
+
+		public ScaffoldInputs(String appName) {
+			this(appName, true, false, true);
+		}
+
+		public ScaffoldInputs(String appName, boolean withSchemasDatabase, boolean withRestServer, boolean withUsersAndRoles) {
+			this.appName = appName;
+			this.withSchemasDatabase = withSchemasDatabase;
+			this.withRestServer = withRestServer;
+			this.withUsersAndRoles = withUsersAndRoles;
+		}
+
+		public String getAppName() {
+			return appName;
+		}
+
+		public boolean isWithSchemasDatabase() {
+			return withSchemasDatabase;
+		}
+
+		public boolean isWithRestServer() {
+			return withRestServer;
+		}
+
+		public boolean isWithUsersAndRoles() {
+			return withUsersAndRoles;
+		}
 	}
 }
