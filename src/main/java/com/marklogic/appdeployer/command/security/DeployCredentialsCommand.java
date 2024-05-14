@@ -19,17 +19,10 @@ import com.marklogic.appdeployer.command.AbstractResourceCommand;
 import com.marklogic.appdeployer.command.CommandContext;
 import com.marklogic.appdeployer.command.SortOrderConstants;
 import com.marklogic.appdeployer.command.UndoableCommand;
-import com.marklogic.mgmt.ManageClient;
-import com.marklogic.mgmt.PayloadParser;
 import com.marklogic.mgmt.resource.ResourceManager;
 import com.marklogic.mgmt.resource.security.CredentialsManager;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 
 import java.io.File;
-import java.net.URI;
 
 public class DeployCredentialsCommand extends AbstractResourceCommand implements UndoableCommand {
 
@@ -47,29 +40,4 @@ public class DeployCredentialsCommand extends AbstractResourceCommand implements
 	protected ResourceManager getResourceManager(CommandContext context) {
 		return new CredentialsManager(context.getManageClient());
 	}
-
-	@Override
-	protected void deleteResource(ResourceManager mgr, CommandContext context, File f) {
-		String payload = copyFileToString(f, context);
-		String type = "aws";
-
-		if (new PayloadParser().isJsonPayload(payload)) {
-			if (payload.contains("\"azure\"")) {
-				type = "azure";
-			}
-		} else {
-			if (payload.contains("<azure>")) {
-				type = "azure";
-			}
-		}
-
-		ManageClient manageClient = context.getManageClient();
-		URI credentialsURI = manageClient.buildUri((new CredentialsManager(manageClient)).getResourcesPath() + "?type=" + type);
-		HttpHeaders headers = new HttpHeaders();
-		headers.set("Content-type", "application/json");
-		HttpEntity<Resource> resourceEntity = new HttpEntity<>(null, headers);
-
-		manageClient.getRestTemplate().exchange(credentialsURI, HttpMethod.DELETE, resourceEntity, String.class);
-	}
-
 }

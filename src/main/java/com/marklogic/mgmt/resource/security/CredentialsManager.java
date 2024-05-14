@@ -15,14 +15,14 @@
  */
 package com.marklogic.mgmt.resource.security;
 
+import com.marklogic.mgmt.DeleteReceipt;
 import com.marklogic.mgmt.ManageClient;
-import com.marklogic.mgmt.SaveReceipt;
 import com.marklogic.mgmt.resource.AbstractResourceManager;
-import org.springframework.http.ResponseEntity;
 
 public class CredentialsManager extends AbstractResourceManager {
+
 	public CredentialsManager(ManageClient client) {
-		super(client);
+		super(client, true);
 	}
 
 	@Override
@@ -30,14 +30,6 @@ public class CredentialsManager extends AbstractResourceManager {
 		return "/manage/v2/credentials/properties";
 	}
 
-	@Override
-	protected String getCreateResourcePath(String payload) {
-		if (payloadParser.isJsonPayload(payload)) {
-			return getResourcesPath() + "?format=json";
-		} else {
-			return getResourcesPath() + "?format=xml";
-		}
-	}
 
 	@Override
 	protected String getIdFieldName() {
@@ -46,30 +38,23 @@ public class CredentialsManager extends AbstractResourceManager {
 
 	@Override
 	protected String getResourceId(String payload) {
-		if (payloadParser.isJsonPayload(payload)) {
-			return payloadParser.getPayloadFieldValue(payload, getIdFieldName());
-		} else {
-			if (payloadParser.getPayloadFieldValue(payload, "aws", false) != null) {
-				return "aws";
-			} else if (payloadParser.getPayloadFieldValue(payload, "azure", false) != null) {
-				return "azure";
-			} else {
-				return null;
-			}
-		}
+		return getCredentialsType(payload);
 	}
 
 	@Override
-	protected SaveReceipt createNewResource(String payload, String resourceId) {
-		String label = getResourceName();
-		if (logger.isInfoEnabled()) {
-			logger.info(format("Creating %s: %s", label, resourceId));
+	public DeleteReceipt delete(String payload, String... resourceUrlParams) {
+		final String type = getCredentialsType(payload);
+		final String path = "/manage/v2/credentials/properties?type=" + type;
+		// The DELETE endpoint - https://docs.marklogic.com/REST/DELETE/manage/v2/credentials/properties - seems to
+		// erroneously require a Content-type header, even though there's no request body.
+		super.deleteAtPath(path, "Content-type", "application/json");
+		return new DeleteReceipt(type, path, true);
+	}
+
+	private String getCredentialsType(String payload) {
+		if (payloadParser.isJsonPayload(payload)) {
+			return payloadParser.getPayloadFieldValue(payload, getIdFieldName());
 		}
-		String path = getCreateResourcePath(payload);
-		ResponseEntity<String> response = putPayload(getManageClient(), path, payload);
-		if (logger.isInfoEnabled()) {
-			logger.info(format("Created %s: %s", label, resourceId));
-		}
-		return new SaveReceipt(resourceId, payload, path, response);
+		return payloadParser.getPayloadFieldValue(payload, "azure", false) != null ? "azure" : "aws";
 	}
 }
